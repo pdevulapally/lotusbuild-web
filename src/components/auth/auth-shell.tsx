@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 
 
 export const authInputClass =
-  "h-12 w-full rounded-xl border border-white/10 bg-[#101010] px-4 text-sm text-[#E1E0CC] outline-none transition-colors placeholder:text-gray-500 focus:border-primary/60";
+  "h-12 w-full rounded-full border border-white/10 bg-[#101010] px-5 text-sm text-[#E1E0CC] outline-none transition-colors placeholder:text-gray-500 focus:border-primary/60";
 
 export const authPrimaryButtonClass =
   "group inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-black transition-all hover:gap-3 disabled:cursor-not-allowed disabled:opacity-50";
