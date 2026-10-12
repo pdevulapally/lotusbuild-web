@@ -9,6 +9,7 @@ const SignInPage = lazy(() => import("@/pages/sign-in"));
 const SignUpPage = lazy(() => import("@/pages/sign-up"));
 const ProjectsPage = lazy(() => import("@/pages/projects"));
 const WorkspacePage = lazy(() => import("@/pages/workspace"));
+const SharedProjectPage = lazy(() => import("@/pages/shared"));
 const PricingPage = lazy(() => import("@/pages/pricing"));
 const TermsPage = lazy(() => import("@/pages/terms"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/share/:projectId" element={<SharedProjectPage />} />
           <Route path="/projects" element={<LegacyProjectsRedirect />} />
           <Route path="/projects/:projectId" element={<LegacyProjectsRedirect />} />
           <Route path="/:username/projects" element={<ProjectsPage />} />

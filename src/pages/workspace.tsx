@@ -1,16 +1,18 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {Monitor, PanelRightClose} from "lucide-react";
+import {FolderGit2, GitBranch, Monitor, PanelRightClose} from "lucide-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 
 import {Composer, type ComposerOptions} from "@/components/composer";
 import type {ReadyAccount} from "@/components/require-account";
 import {DesktopPanel} from "@/components/workspace/desktop-panel";
+import {FilesPanel} from "@/components/workspace/files-panel";
+import {ShareMenu} from "@/components/workspace/share-menu";
 import {Markdown, RunActivity} from "@/components/workspace/run-activity";
 import {errorText, iconButton, PanelIcon, WorkspaceShell} from "@/components/workspace/shell";
 import {ApiError} from "@/lib/api/client";
 import {composerModels} from "@/lib/api/me";
-import {getProject, type Project} from "@/lib/api/projects";
+import {getProject, getProjectFile, getProjectTree, type Project, type ProjectTree} from "@/lib/api/projects";
 import {readSessionEvents, StreamClosedError} from "@/lib/api/session-events";
 import {cancelSession, createSession, listMessages, listQueuedMessages, listSessions, sendFollowUp, type Message, type QueuedMessage, type Session} from "@/lib/api/sessions";
 import {EASE} from "@/lib/motion";
@@ -33,7 +35,10 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const [stopping, setStopping] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [showDesktop, setShowDesktop] = useState(true);
-  const [tab, setTab] = useState<"chat" | "desktop">("chat");
+  const [pane, setPane] = useState<"files" | "desktop">("desktop");
+  const [tab, setTab] = useState<"chat" | "files" | "desktop">("chat");
+  const [branch, setBranch] = useState<string | undefined>();
+  const [tree, setTree] = useState<{status: "loading"} | {status: "error"; message: string} | {status: "ready"; value: ProjectTree}>({status: "loading"});
   const [refreshKey, setRefreshKey] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -57,6 +62,15 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     refresh().catch(failure => setLoaded(failure instanceof ApiError && failure.status === 404
       ? {status: "missing"} : {status: "error", message: errorText(failure, "We couldn't load this project.")}));
   }, [refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTree({status: "loading"});
+    token().then(auth => getProjectTree(auth, projectId, branch)).then(value => !cancelled && setTree({status: "ready", value}),
+      failure => !cancelled && setTree({status: "error", message: errorText(failure, "Project files couldn't be loaded.")}));
+    return () => { cancelled = true; };
+  }, [projectId, branch, token, activity.save, session?.status]);
+  const loadFile = useCallback(async (path: string) => getProjectFile(await token(), projectId, path, branch), [token, projectId, branch]);
 
   const sessionId = session?.id ?? null;
   const live = isLive(session);
@@ -141,7 +155,18 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
         <>
           <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#070707]/80 px-3 backdrop-blur-xl sm:px-5">
             <button type="button" aria-label="Open sidebar" onClick={openSidebar} className={`${iconButton} md:hidden`}><PanelIcon /></button>
-            <h1 className="min-w-0 truncate text-[14px] text-[#E1E0CC]">{project?.name ?? (loaded.status === "loading" ? "" : "Project")}</h1>
+            <div className="flex min-w-0 items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.02] py-1 pl-2.5 pr-1 text-[13px]">
+              <FolderGit2 aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+              <h1 className="min-w-0 max-w-[10rem] truncate text-[#E1E0CC] sm:max-w-[16rem]">{project?.name ?? (loaded.status === "loading" ? "" : "Project")}</h1>
+              {tree.status === "ready" && tree.value.branches.length > 0 && (
+                <label className="relative ml-1 flex items-center gap-1 rounded-full bg-white/[0.05] py-0.5 pl-2 pr-1 text-[12px] text-gray-300">
+                  <GitBranch aria-hidden className="h-3 w-3" /><span className="sr-only">Branch</span>
+                  <select value={branch ?? tree.value.ref ?? ""} onChange={event => setBranch(event.target.value)} className="max-w-[7rem] cursor-pointer appearance-none truncate bg-transparent pr-1 outline-none">
+                    {tree.value.branches.map(name => <option key={name} value={name} className="bg-[#141414]">{name}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
             <AnimatePresence mode="wait">
               {session && (
                 <motion.span key={working ? "working" : session.status} initial={{opacity: 0, scale: 0.9}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} transition={{duration: 0.25, ease: EASE}}
@@ -152,11 +177,12 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
               )}
             </AnimatePresence>
             {activity.save !== "unknown" && <span className={`hidden text-[11px] sm:block ${activity.save === "saved" ? "text-gray-500" : "text-rose-300/80"}`}>{activity.save === "saved" ? "Changes saved" : "Save failed"}</span>}
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-1.5">
+              {project && <ShareMenu account={account} projectId={projectId} />}
               <div role="tablist" aria-label="View" className="flex rounded-full border border-white/[0.07] p-0.5 text-[12px] lg:hidden">
-                {(["chat", "desktop"] as const).map(name => (
+                {(["chat", "files", "desktop"] as const).map(name => (
                   <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}
-                    className={`rounded-full px-3 py-1 capitalize transition-colors duration-300 ${tab === name ? "bg-white/[0.08] text-[#E1E0CC]" : "text-gray-500"}`}>{name}</button>
+                    className={`rounded-full px-2.5 py-1 capitalize transition-colors duration-300 ${tab === name ? "bg-white/[0.08] text-[#E1E0CC]" : "text-gray-500"}`}>{name}</button>
                 ))}
               </div>
               <button type="button" onClick={() => setShowDesktop(value => !value)} aria-pressed={showDesktop} aria-label={showDesktop ? "Hide desktop" : "Show desktop"} className={`${iconButton} hidden lg:flex`}>
@@ -233,10 +259,27 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                 {showDesktop && (
                   <motion.aside key="desktop" aria-label="Desktop" initial={{opacity: 0, width: 0}} animate={{opacity: 1, width: "46%"}} exit={{opacity: 0, width: 0}} transition={{duration: 0.5, ease: EASE}}
                     className="hidden min-h-0 shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#0a0a0a] lg:block">
-                    <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />
+                    <div className="flex h-full flex-col">
+                      <div role="tablist" aria-label="Panel" className="flex h-11 shrink-0 items-center gap-1 border-b border-white/[0.06] px-3">
+                        {(["files", "desktop"] as const).map(name => (
+                          <button key={name} type="button" role="tab" aria-selected={pane === name} onClick={() => setPane(name)}
+                            className={`relative rounded-full px-3 py-1 text-[12px] capitalize transition-colors duration-300 ${pane === name ? "text-[#E1E0CC]" : "text-gray-500 hover:text-gray-300"}`}>
+                            {pane === name && <motion.span layoutId="pane-pill" transition={{duration: 0.35, ease: EASE}} className="absolute inset-0 rounded-full bg-white/[0.07]" />}
+                            <span className="relative">{name}</span>
+                          </button>
+                        ))}
+                        {pane === "files" && <span className="ml-auto text-[11px] text-gray-600">Last saved version</span>}
+                      </div>
+                      <div className="min-h-0 flex-1">
+                        {pane === "files" ? <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} /> : <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
+                      </div>
+                    </div>
                   </motion.aside>
                 )}
               </AnimatePresence>
+              <section aria-label="Files" className={`min-h-0 flex-1 bg-[#0a0a0a] lg:hidden ${tab === "files" ? "block" : "hidden"}`}>
+                {tab === "files" && <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} />}
+              </section>
               <section aria-label="Desktop" className={`min-h-0 flex-1 bg-[#0a0a0a] lg:hidden ${tab === "desktop" ? "block" : "hidden"}`}>
                 {tab === "desktop" && <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
               </section>
