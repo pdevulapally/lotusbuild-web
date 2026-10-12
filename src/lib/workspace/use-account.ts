@@ -10,7 +10,7 @@ export type WorkspaceAccount =
   | {status: "loading"}
   | {status: "signed-out"}
   | {status: "error"; message: string}
-  | {status: "ready"; user: User; me: Me; username: string};
+  | {status: "ready"; user: User; me: Me; username: string; recheck: () => Promise<void>};
 
 const REFRESH_MS = 60_000;
 
@@ -32,14 +32,16 @@ export function useWorkspaceAccount(): WorkspaceAccount {
       }
       setState(previous => previous.status === "ready" && previous.user.uid === user.uid ? previous : {status: "loading"});
       let inFlight = false;
-      const refresh = async (background: boolean) => {
+      // `fresh` reloads the Firebase user and forces a new token, so a just-verified email reaches the backend.
+      const refresh = async (background: boolean, fresh = false): Promise<void> => {
         if (inFlight) return;
         inFlight = true;
         try {
-          const me = await getMe(await user.getIdToken(background));
+          if (fresh) await user.reload();
+          const me = await getMe(await user.getIdToken(background || fresh));
           if (current !== generation) return;
           if (me.uid !== user.uid) throw new ApiError(401, "auth/mismatch", "Account mismatch.");
-          setState({status: "ready", user, me, username: usernameSlug(me.displayName || user.displayName, me.uid)});
+          setState({status: "ready", user, me, username: usernameSlug(me.displayName || user.displayName, me.uid), recheck: () => refresh(true, true)});
         } catch (failure) {
           if (current !== generation) return;
           if (failure instanceof ApiError && failure.status === 401) {

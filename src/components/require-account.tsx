@@ -7,6 +7,7 @@ import {EASE} from "@/lib/motion";
 import {isDocumentId} from "@/lib/security/validation";
 import {workspacePath} from "@/lib/workspace/slug";
 import {useWorkspaceAccount, type WorkspaceAccount} from "@/lib/workspace/use-account";
+import {VerifyEmail} from "./verify-email";
 
 export type ReadyAccount = Extract<WorkspaceAccount, {status: "ready"}>;
 
@@ -54,6 +55,7 @@ export function RequireAccount({children}: {children: (account: ReadyAccount) =>
       </Gate>
     );
   }
+  if (!account.me.emailVerified) return <VerifyEmail account={account} />;
   return <>{children(account)}</>;
 }
 

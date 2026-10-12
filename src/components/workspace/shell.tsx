@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {CreditCard, LogOut, Trash2} from "lucide-react";
+import {CreditCard, LogOut, Trash2, UserRound} from "lucide-react";
 import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
 import {createPortal} from "react-dom";
 import {Link, useLocation, useNavigate} from "react-router-dom";
@@ -153,6 +153,7 @@ function AccountMenu({account, projectCount, isCollapsed, onSignOut}: {account: 
             </div>
 
             <div className="flex flex-col gap-0.5 border-t border-white/[0.06] p-2">
+              <Link to="/account" role="menuitem" className={item}><UserRound aria-hidden className="h-4 w-4 text-gray-500" /> Account and data</Link>
               <Link to="/pricing" role="menuitem" className={item}><CreditCard aria-hidden className="h-4 w-4 text-gray-500" /> Plans and billing</Link>
               <button type="button" role="menuitem" onClick={onSignOut} className={`${item} text-left`}><LogOut aria-hidden className="h-4 w-4 text-gray-500" /> Sign out</button>
             </div>
