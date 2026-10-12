@@ -1,9 +1,11 @@
 import {motion} from "framer-motion";
 import type {ReactNode} from "react";
-import {Navigate, useLocation} from "react-router-dom";
+import {Navigate, useLocation, useParams} from "react-router-dom";
 
 import {auth} from "@/lib/firebase/client";
 import {EASE} from "@/lib/motion";
+import {isDocumentId} from "@/lib/security/validation";
+import {workspacePath} from "@/lib/workspace/slug";
 import {useWorkspaceAccount, type WorkspaceAccount} from "@/lib/workspace/use-account";
 
 export type ReadyAccount = Extract<WorkspaceAccount, {status: "ready"}>;
@@ -53,4 +55,30 @@ export function RequireAccount({children}: {children: (account: ReadyAccount) =>
     );
   }
   return <>{children(account)}</>;
+}
+
+function OwnPath({account, children}: {account: ReadyAccount; children: (account: ReadyAccount) => ReactNode}) {
+  const {username, projectId} = useParams();
+  const validProject = projectId !== undefined && isDocumentId(projectId) ? projectId : undefined;
+  if (username !== account.username || (projectId !== undefined && !validProject)) {
+    return <Navigate to={workspacePath(account.username, validProject)} replace />;
+  }
+  return <>{children(account)}</>;
+}
+
+// Personal workspace URLs (/:username/projects/...) must name the verified
+// account; anything else redirects to the caller's own path. The URL is only
+// presentation: the backend authorises every request from the token alone.
+export function RequireOwnWorkspace({children}: {children: (account: ReadyAccount) => ReactNode}) {
+  return <RequireAccount>{account => <OwnPath account={account}>{children}</OwnPath>}</RequireAccount>;
+}
+
+// Old /projects links resolve to the signed-in account's personal path.
+export function LegacyProjectsRedirect() {
+  const {projectId} = useParams();
+  return (
+    <RequireAccount>
+      {account => <Navigate to={workspacePath(account.username, projectId && isDocumentId(projectId) ? projectId : undefined)} replace />}
+    </RequireAccount>
+  );
 }

@@ -81,6 +81,7 @@ export function isPlanKey(value: string): boolean {
 }
 
 const NEXT_PREFIXES = ["/projects", "/pricing"];
+const WORKSPACE_PATH = /^\/[a-z0-9-]{1,64}\/projects(?:\/[A-Za-z0-9_-]{1,128})?$/;
 
 // Only same-origin app paths are accepted as a post-sign-in destination, so a
 // crafted ?next= can never send someone to another site.
@@ -90,7 +91,7 @@ export function safeNextPath(raw: string | null | undefined): string {
   try {
     const url = new URL(raw, window.location.origin);
     if (url.origin !== window.location.origin) return fallback;
-    if (!NEXT_PREFIXES.some(prefix => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return fallback;
+    if (!NEXT_PREFIXES.some(prefix => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)) && !WORKSPACE_PATH.test(url.pathname)) return fallback;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;

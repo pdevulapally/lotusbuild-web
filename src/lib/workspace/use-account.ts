@@ -39,7 +39,7 @@ export function useWorkspaceAccount(): WorkspaceAccount {
           const me = await getMe(await user.getIdToken(background));
           if (current !== generation) return;
           if (me.uid !== user.uid) throw new ApiError(401, "auth/mismatch", "Account mismatch.");
-          setState({status: "ready", user, me, username: usernameSlug(me.displayName, me.uid)});
+          setState({status: "ready", user, me, username: usernameSlug(me.displayName || user.displayName, me.uid)});
         } catch (failure) {
           if (current !== generation) return;
           if (failure instanceof ApiError && failure.status === 401) {

@@ -2,7 +2,7 @@ import {lazy, Suspense, useEffect} from "react";
 import {BrowserRouter, Route, Routes, useLocation} from "react-router-dom";
 
 import {CookieBanner} from "@/components/cookie-banner";
-import {RequireAccount} from "@/components/require-account";
+import {LegacyProjectsRedirect, RequireOwnWorkspace} from "@/components/require-account";
 import LandingPage from "@/pages/landing";
 
 const SignInPage = lazy(() => import("@/pages/sign-in"));
@@ -44,8 +44,10 @@ export default function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/:projectId" element={<RequireAccount>{() => <WorkspacePage />}</RequireAccount>} />
+          <Route path="/projects" element={<LegacyProjectsRedirect />} />
+          <Route path="/projects/:projectId" element={<LegacyProjectsRedirect />} />
+          <Route path="/:username/projects" element={<ProjectsPage />} />
+          <Route path="/:username/projects/:projectId" element={<RequireOwnWorkspace>{() => <WorkspacePage />}</RequireOwnWorkspace>} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
