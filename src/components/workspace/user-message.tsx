@@ -1,6 +1,6 @@
 import {AnimatePresence, motion} from "framer-motion";
 import {Check, Copy, PencilLine} from "lucide-react";
-import {useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
 
 import {EASE} from "@/lib/motion";
 
@@ -14,16 +14,12 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
   const [sending, setSending] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (!editing || !field.current) return;
-    const el = field.current;
-    el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
-  }, [editing]);
-  useEffect(() => {
-    const el = field.current;
-    if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 320)}px`; }
-  }, [draft, editing]);
+  const fit = (el: HTMLTextAreaElement) => { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 320)}px`; };
+  // The editor mounts after the exit animation, so it is sized and focused when it attaches.
+  const attach = (el: HTMLTextAreaElement | null) => {
+    if (el && field.current !== el) { fit(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    field.current = el;
+  };
 
   async function copy() {
     try { await navigator.clipboard.writeText(content); setCopied(true); window.setTimeout(() => setCopied(false), 1600); } catch { /* clipboard blocked: nothing copied, no false confirmation */ }
@@ -44,7 +40,7 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
           <motion.div key="edit" initial={{opacity: 0, scale: 0.98}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} transition={{duration: 0.2, ease: EASE}}
             className="w-full max-w-[85%] rounded-3xl border border-white/10 bg-white/[0.04] p-3">
             <label className="sr-only" htmlFor={`edit-${content.length}`}>Edit message</label>
-            <textarea id={`edit-${content.length}`} ref={field} value={draft} onChange={event => setDraft(event.target.value)} rows={1}
+            <textarea id={`edit-${content.length}`} ref={attach} value={draft} onChange={event => { setDraft(event.target.value); fit(event.target); }} rows={1}
               onKeyDown={event => { if (event.key === "Escape") { setEditing(false); setDraft(content); } if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) void save(); }}
               className="chat-scroll w-full resize-none bg-transparent px-1 text-[15px] leading-6 text-[#E1E0CC] outline-none" />
             <div className="mt-2 flex justify-end gap-2">
