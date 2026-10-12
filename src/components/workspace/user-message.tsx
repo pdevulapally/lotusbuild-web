@@ -12,7 +12,7 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
   const [sending, setSending] = useState(false);
-  const field = useRef<HTMLTextAreaElement>(null);
+  const field = useRef<HTMLTextAreaElement | null>(null);
 
   const fit = (el: HTMLTextAreaElement) => { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 320)}px`; };
   // The editor mounts after the exit animation, so it is sized and focused when it attaches.
