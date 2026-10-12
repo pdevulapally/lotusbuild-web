@@ -163,9 +163,9 @@ export default function PricingPage() {
                     {isCurrent ? (
                       plan.price
                         ? <button type="button" disabled={pending !== null} onClick={portal} className="w-full rounded-full border border-white/15 py-3 text-sm transition-colors hover:bg-white/5 disabled:opacity-50">{pending === "portal" ? "Opening billing…" : "Manage billing"}</button>
-                        : <Link to="/projects" className="block w-full rounded-full border border-white/15 py-3 text-center text-sm transition-colors hover:bg-white/5">Open app</Link>
+                        : <Link to="/projects" className="block w-full rounded-full border border-white/15 py-3 text-center text-sm transition-colors hover:bg-white/5">Start building</Link>
                     ) : !plan.price ? (
-                      <Link to={ready ? "/projects" : "/sign-up"} className="block w-full rounded-full border border-white/15 py-3 text-center text-sm transition-colors hover:bg-white/5">{ready ? "Open app" : "Start free"}</Link>
+                      <Link to={ready ? "/projects" : "/sign-up"} className="block w-full rounded-full border border-white/15 py-3 text-center text-sm transition-colors hover:bg-white/5">{ready ? "Start building" : "Start free"}</Link>
                     ) : ready ? (
                       <button type="button" disabled={pending !== null} onClick={() => void checkout(plan)}
                         className={`group flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition-all disabled:opacity-50 ${isFeatured ? "bg-primary text-black hover:gap-3" : "bg-white/10 text-[#E1E0CC] hover:bg-white/15"}`}>

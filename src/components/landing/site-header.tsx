@@ -43,7 +43,7 @@ export function SiteHeader() {
           {auth === "unknown" ? <span role="status" aria-label="Checking sign-in" className="h-10 w-36 animate-pulse rounded-full bg-white/10" /> : <>{!signedIn && <Link to="/sign-in" className="hidden rounded-full px-4 py-2 text-sm text-primary/70 transition-colors hover:text-[#E1E0CC] sm:block">Sign in</Link>}
           <Link to={signedIn ? "/projects" : "/sign-up"}
             className="group inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-4 pr-1 text-sm font-medium text-black transition-all hover:gap-3">
-            {signedIn ? "Open app" : "Start building"}
+            Start building
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black transition-transform group-hover:scale-105">
               <ArrowRight aria-hidden className="h-3.5 w-3.5" style={{color: "#E1E0CC"}} />
             </span>
