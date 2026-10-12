@@ -8,7 +8,7 @@ import {Composer} from "@/components/composer";
 import {RequireOwnWorkspace, type ReadyAccount} from "@/components/require-account";
 import {BuildStartError, startBuild} from "@/lib/api/build";
 import {ApiError} from "@/lib/api/client";
-import {composerModels} from "@/lib/api/me";
+import {composerModels, getUsage, type UsageMeter} from "@/lib/api/me";
 import {deleteProject, listProjects, type Project} from "@/lib/api/projects";
 import {auth} from "@/lib/firebase/client";
 import {EASE} from "@/lib/motion";
@@ -39,13 +39,6 @@ function errorText(failure: unknown, fallback: string) {
     return failure.message;
   }
   return fallback;
-}
-
-function greeting(hour: number) {
-  if (hour < 5) return "Working late";
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
 }
 
 function PanelIcon({filled}: {filled?: boolean}) {
@@ -81,33 +74,97 @@ function Avatar({account}: {account: ReadyAccount}) {
   );
 }
 
-function AccountMenu({account, isCollapsed, onSignOut}: {account: ReadyAccount; isCollapsed: boolean; onSignOut: () => void}) {
+const compact = new Intl.NumberFormat("en-GB", {notation: "compact", maximumFractionDigits: 1});
+
+function Meter({label, used, limit}: {label: string; used: number; limit: number | null}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3 text-[12px]">
+        <span className="text-gray-400">{label}</span>
+        <span className="tabular-nums text-gray-500">{compact.format(used)}{limit !== null && ` / ${compact.format(limit)}`}</span>
+      </div>
+      {limit !== null && limit > 0 && (
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+          <motion.div className="h-full rounded-full bg-primary" initial={{width: 0}} animate={{width: `${Math.min(100, (used / limit) * 100)}%`}} transition={{duration: 0.8, ease: EASE}} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The menu stays short: only the metered allowances closest to their limit.
+function keyMeters(meters: UsageMeter[]) {
+  return meters
+    .filter(meter => meter.limit !== null && meter.limit > 0)
+    .map((meter, index) => ({meter, index, ratio: meter.used / (meter.limit as number)}))
+    .sort((a, b) => b.ratio - a.ratio || a.index - b.index)
+    .slice(0, 3)
+    .map(entry => entry.meter);
+}
+
+type Usage = {status: "loading"} | {status: "error"} | {status: "ready"; meters: UsageMeter[]};
+
+function AccountMenu({account, projectCount, isCollapsed, onSignOut}: {account: ReadyAccount; projectCount: number | null; isCollapsed: boolean; onSignOut: () => void}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [usage, setUsage] = useState<Usage>({status: "loading"});
+  const limit = account.me.capabilities.find(item => item.key === "projects.max")?.value;
+  const maxProjects = typeof limit === "number" && limit > 0 ? limit : null;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setUsage({status: "loading"});
+    void (async () => {
+      try {
+        const meters = await getUsage(await account.user.getIdToken());
+        if (!cancelled) setUsage({status: "ready", meters});
+      } catch {
+        if (!cancelled) setUsage({status: "error"});
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, account.user]);
+
+  const item = "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] text-gray-300 transition-colors hover:bg-white/[0.05] hover:text-[#E1E0CC]";
+
   return (
     <div className="relative"
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false); }}
       onKeyDown={event => { if (event.key === "Escape") setIsOpen(false); }}>
       <AnimatePresence>
         {isOpen && (
-          <motion.div role="menu" initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 6}} transition={{duration: 0.2, ease: EASE}}
-            className={`absolute bottom-full z-20 mb-3 flex w-64 flex-col gap-1 rounded-2xl border border-white/[0.08] bg-[#141414] p-2 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.7)] ${isCollapsed ? "left-0" : "inset-x-0 w-auto"}`}>
-            <div className="flex flex-col gap-1 px-3 py-2">
-              <span className="break-all text-[13px] text-gray-400">{account.me.email}</span>
-              <span className="text-[12px] text-gray-600">{account.me.emailVerified ? "Email verified" : "Email not verified"}</span>
+          <motion.div role="menu" initial={{opacity: 0, y: 8, scale: 0.98}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 8, scale: 0.98}} transition={{duration: 0.22, ease: EASE}}
+            className={`absolute bottom-full z-20 mb-3 origin-bottom-left overflow-hidden rounded-2xl border border-white/[0.08] bg-[#141414]/95 shadow-[0_24px_60px_-16px_rgba(0,0,0,0.8)] backdrop-blur-2xl ${isCollapsed ? "left-0 w-72" : "inset-x-0"}`}>
+            <div className="flex items-center gap-3 p-4">
+              <Avatar account={account} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] text-[#E1E0CC]">{fullName(account) || account.username}</p>
+                <p className="truncate text-[12px] text-gray-500">{account.me.email}</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">{account.me.plan.name}</span>
             </div>
-            <Link to="/pricing" role="menuitem" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] text-[#E1E0CC] transition-colors hover:bg-white/[0.05]">
-              <CreditCard aria-hidden className="h-4 w-4 text-gray-500" /> Plans and billing
-            </Link>
-            <button type="button" role="menuitem" onClick={onSignOut} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14px] text-[#E1E0CC] transition-colors hover:bg-white/[0.05]">
-              <LogOut aria-hidden className="h-4 w-4 text-gray-500" /> Sign out
-            </button>
+
+            <div className="flex flex-col gap-3 border-t border-white/[0.06] px-4 py-4">
+              {projectCount !== null && <Meter label="Projects" used={projectCount} limit={maxProjects} />}
+              {usage.status === "loading" && [0, 1].map(n => <span key={n} className="h-3 animate-pulse rounded bg-white/[0.06]" />)}
+              {usage.status === "error" && <p className="text-[12px] text-gray-500">Usage couldn't be loaded.</p>}
+              {usage.status === "ready" && keyMeters(usage.meters).map(meter => <Meter key={meter.meterKey} label={meter.label} used={meter.used} limit={meter.limit} />)}
+              <Link to="/pricing" role="menuitem" className="mt-1 flex h-9 items-center justify-center rounded-full bg-primary text-[13px] font-medium text-black transition-opacity hover:opacity-90">
+                Upgrade plan
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-0.5 border-t border-white/[0.06] p-2">
+              <Link to="/pricing" role="menuitem" className={item}><CreditCard aria-hidden className="h-4 w-4 text-gray-500" /> Plans and billing</Link>
+              <button type="button" role="menuitem" onClick={onSignOut} className={`${item} text-left`}><LogOut aria-hidden className="h-4 w-4 text-gray-500" /> Sign out</button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
       <button type="button" aria-haspopup="menu" aria-expanded={isOpen} aria-label="Account" onClick={() => setIsOpen(open => !open)}
         className={isCollapsed
           ? "flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200 hover:bg-white/[0.06]"
-          : "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-200 hover:bg-white/[0.04]"}>
+          : `flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-200 hover:bg-white/[0.04] ${isOpen ? "bg-white/[0.04]" : ""}`}>
         <Avatar account={account} />
         {!isCollapsed && (
           <span className="flex min-w-0 flex-1 flex-col">
@@ -246,8 +303,6 @@ type SidebarProps = {
 function Sidebar({account, listing, isOpen, onOpenChange, onSearch, onNewProject, onDelete, onRetry, onSignOut}: SidebarProps) {
   const [isListOpen, setIsListOpen] = useState(true);
   const closeOnMobile = () => { if (window.matchMedia("(max-width: 767px)").matches) onOpenChange(false); };
-  const limit = account.me.capabilities.find(item => item.key === "projects.max")?.value;
-  const max = typeof limit === "number" && limit > 0 ? limit : null;
   const projects = listing.status === "ready" ? [...listing.projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
 
   return (
@@ -300,19 +355,7 @@ function Sidebar({account, listing, isOpen, onOpenChange, onSearch, onNewProject
         )}
       </section>
 
-      {isOpen && listing.status === "ready" && max !== null && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-400">{listing.projects.length} of {max} projects</span>
-            <Link to="/pricing" className="text-primary transition-opacity hover:opacity-80">Upgrade</Link>
-          </div>
-          <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-            <motion.div className="h-full rounded-full bg-primary" initial={{width: 0}} animate={{width: `${Math.min(100, (listing.projects.length / max) * 100)}%`}} transition={{duration: 0.9, ease: EASE}} />
-          </div>
-        </div>
-      )}
-
-      <AccountMenu account={account} isCollapsed={!isOpen} onSignOut={onSignOut} />
+      <AccountMenu account={account} projectCount={listing.status === "ready" ? listing.projects.length : null} isCollapsed={!isOpen} onSignOut={onSignOut} />
     </aside>
   );
 }
@@ -355,7 +398,6 @@ function Projects({account}: {account: ReadyAccount}) {
   useEffect(() => { void load(); }, [load, location.pathname]);
 
   const firstName = fullName(account).split(/\s+/)[0];
-  const hello = greeting(new Date().getHours());
 
   async function signOutNow() {
     const {signOut} = await import("firebase/auth");
@@ -415,8 +457,7 @@ function Projects({account}: {account: ReadyAccount}) {
             <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(45%_70%_at_50%_0%,rgba(225,224,204,0.08),transparent)]" />
             <motion.section initial={{opacity: 0, y: 16}} animate={{opacity: 1, y: 0}} transition={{duration: 0.7, delay: 0.1, ease: EASE}}
               className="relative flex w-full max-w-3xl flex-1 flex-col justify-center py-16 md:pb-[18vh]">
-              <h1 className="text-center text-3xl tracking-[-0.02em] sm:text-[42px] sm:leading-[1.1]">{firstName ? `${hello}, ${firstName}` : hello}</h1>
-              <p className="mt-3 text-center text-[15px] text-gray-500">What should we build today?</p>
+              <h1 className="text-center text-3xl tracking-[-0.02em] sm:text-[40px] sm:leading-[1.15]">{firstName ? `What should we build, ${firstName}?` : "What should we build today?"}</h1>
               <div className="mt-8">
                 <Composer size="hero" label="Describe a project to build" placeholder="Describe the app you want, e.g. a booking site for a dental clinic"
                   onSubmit={build} isDisabled={building} models={composerModels(account.me)} error={buildError} />

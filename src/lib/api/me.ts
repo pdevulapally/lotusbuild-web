@@ -38,3 +38,21 @@ export function getMe(token: string) {
 export function composerModels(me: Me): AgentModel[] {
   return (me.models ?? []).map(model => ({...model, efforts: allowedEfforts(me, model.id)}));
 }
+
+export type UsageMeter = {meterKey: string; label: string; unit: string; used: number; limit: number | null};
+
+function count(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+// GET /me/usage, schema-checked: malformed meters are dropped, never guessed.
+export async function getUsage(token: string): Promise<UsageMeter[]> {
+  const body = await apiRequest<{meters?: unknown}>("/me/usage", {token});
+  if (!Array.isArray(body.meters)) throw new Error("Usage is unavailable");
+  return body.meters.flatMap((entry: Record<string, unknown>) => {
+    const used = count(entry?.totalUsed);
+    if (typeof entry?.meterKey !== "string" || typeof entry.label !== "string" || used === null) return [];
+    return [{meterKey: entry.meterKey, label: entry.label, unit: typeof entry.unit === "string" ? entry.unit : "", used,
+      limit: count(entry.hardLimit) ?? count(entry.includedAllowance)}];
+  });
+}
