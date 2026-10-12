@@ -4,7 +4,7 @@ import {useRef, useState} from "react";
 
 import {EASE} from "@/lib/motion";
 
-const action = "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/[0.06] hover:text-[#E1E0CC] focus-visible:text-[#E1E0CC] disabled:opacity-40";
+const action = "flex h-[26px] w-[26px] items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-white/[0.06] hover:text-[#E1E0CC] focus-visible:text-[#E1E0CC] disabled:opacity-40";
 
 // A sent prompt with ChatGPT-style copy and edit. Editing sends the revised text as a new message.
 export function UserMessage({content, canEdit, onEdit}: {content: string; canEdit: boolean; onEdit: (text: string) => Promise<boolean>}) {
@@ -54,11 +54,11 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
         )}
       </AnimatePresence>
       {!editing && (
-        <div className="mt-1 flex gap-0.5 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+        <div className="mt-1.5 flex gap-1 pr-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
           <button type="button" onClick={() => void copy()} aria-label={copied ? "Copied" : "Copy message"} title={copied ? "Copied" : "Copy"} className={action}>
-            {copied ? <Check aria-hidden className="h-4 w-4" /> : <Copy aria-hidden className="h-4 w-4" />}
+            {copied ? <Check aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" /> : <Copy aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />}
           </button>
-          {canEdit && <button type="button" onClick={() => { setDraft(content); setEditing(true); }} aria-label="Edit message" title="Edit" className={action}><PencilLine aria-hidden className="h-4 w-4" /></button>}
+          {canEdit && <button type="button" onClick={() => { setDraft(content); setEditing(true); }} aria-label="Edit message" title="Edit" className={action}><PencilLine aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" /></button>}
           <span aria-live="polite" className="sr-only">{copied ? "Copied to clipboard" : ""}</span>
         </div>
       )}
