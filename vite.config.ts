@@ -39,6 +39,7 @@ export default defineConfig(({mode}) => {
       } : undefined,
     },
     preview: {port: 3000, strictPort: true, headers: previewHeaders},
-    build: {sourcemap: false},
+    build: {sourcemap: false, target: "es2022"},
+    optimizeDeps: {esbuildOptions: {target: "es2022"}},
   };
 });

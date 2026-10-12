@@ -47,7 +47,7 @@ export default function App() {
           <Route path="/projects" element={<LegacyProjectsRedirect />} />
           <Route path="/projects/:projectId" element={<LegacyProjectsRedirect />} />
           <Route path="/:username/projects" element={<ProjectsPage />} />
-          <Route path="/:username/projects/:projectId" element={<RequireOwnWorkspace>{() => <WorkspacePage />}</RequireOwnWorkspace>} />
+          <Route path="/:username/projects/:projectId" element={<RequireOwnWorkspace>{account => <WorkspacePage account={account} />}</RequireOwnWorkspace>} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

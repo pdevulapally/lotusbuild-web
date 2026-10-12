@@ -45,6 +45,8 @@ body { background: #000; color: #E1E0CC; -webkit-font-smoothing: antialiased; }
 .orb-core { background: conic-gradient(from 0deg, #E1E0CC, #b9a77c, #fffdf2, #8f8466, #E1E0CC); animation: orbSpin 2.4s linear infinite; box-shadow: 0 0 8px rgba(225, 224, 204, 0.55); }
 .orb-halo { background: rgba(225, 224, 204, 0.35); animation: orbBreathe 1.8s ease-in-out infinite; }
 .tool-icon-active { animation: iconGlow 1.4s ease-in-out infinite; }
+.check-in { animation: checkIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.markdown.streaming > :last-child::after { content: ""; display: inline-block; width: 0.45em; height: 1em; margin-left: 2px; vertical-align: -0.15em; background: rgba(225, 224, 204, 0.75); border-radius: 1px; animation: caret 0.9s steps(1) infinite; }
 .stream-caret { display: inline-block; width: 0.45em; height: 1em; margin-left: 1px; vertical-align: -0.15em; background: rgba(225, 224, 204, 0.75); border-radius: 1px; animation: caret 0.9s steps(1) infinite; }
 @media (prefers-reduced-motion: reduce) {
   .text-shimmer, .orb-core, .orb-halo, .tool-icon-active, .stream-caret { animation: none; }
