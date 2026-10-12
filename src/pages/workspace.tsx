@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {FolderGit2, GitBranch, Monitor, PanelRightClose} from "lucide-react";
+import {CornerDownRight, FolderGit2, GitBranch, Monitor, PanelRightClose, X} from "lucide-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 
@@ -16,7 +16,7 @@ import {ApiError} from "@/lib/api/client";
 import {composerModels} from "@/lib/api/me";
 import {getProject, getProjectFile, getProjectTree, type Project, type ProjectTree} from "@/lib/api/projects";
 import {readSessionEvents, StreamClosedError} from "@/lib/api/session-events";
-import {cancelSession, createSession, listMessages, listQueuedMessages, listSessions, sendFollowUp, type Message, type QueuedMessage, type Session} from "@/lib/api/sessions";
+import {cancelSession, createSession, deleteQueuedMessage, listMessages, listQueuedMessages, listSessions, sendFollowUp, type Message, type QueuedMessage, type Session} from "@/lib/api/sessions";
 import {EASE} from "@/lib/motion";
 import {checkPrompt} from "@/lib/security/validation";
 import {initialActivity, reduceActivity, type Activity} from "@/lib/workspace/activity";
@@ -31,6 +31,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [queued, setQueued] = useState<QueuedMessage[]>([]);
+  const [queueBusy, setQueueBusy] = useState<string | null>(null);
   const [activity, setActivity] = useState<Activity>(initialActivity);
   const [desktopReady, setDesktopReady] = useState(false);
   const [stream, setStream] = useState<"idle" | "live" | "reconnecting">("idle");
@@ -121,13 +122,14 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     const echo = (content: string): Message => ({seq: Number.MAX_SAFE_INTEGER - messages.length, role: "user", content, createdAt: new Date().toISOString()});
     try {
       if (!session) {
-        const created = await createSession(await token(), projectId, {prompt: checked.value, model, ...options});
+        const {steer: _steer, ...settings} = options;
+        const created = await createSession(await token(), projectId, {prompt: checked.value, model, ...settings});
         setActivity(initialActivity);
         setMessages([echo(checked.value)]);
         setSession(created);
         return;
       }
-      const result = await sendFollowUp(await token(), session.id, checked.value);
+      const result = await sendFollowUp(await token(), session.id, checked.value, options.steer === true);
       if ("steered" in result) setMessages(list => [...list, echo(checked.value)]);
       else if (result.queued) setQueued(list => [...list, result.queuedMessage]);
       else {
@@ -139,6 +141,39 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
       setSendError(errorText(failure, "We couldn't confirm your message. Check the conversation before sending again."));
       return false;
     }
+  }
+
+  async function removeQueued(id: string) {
+    if (!session) return;
+    setQueueBusy(id); setSendError(null);
+    try {
+      await deleteQueuedMessage(await token(), session.id, id);
+      setQueued(list => list.filter(item => item.id !== id));
+    } catch (failure) {
+      setSendError(errorText(failure, "That message couldn't be removed. Try again."));
+    } finally { setQueueBusy(null); }
+  }
+
+  // Steering sends a queued message into the current run, then drops it from the queue.
+  async function steerQueued(item: QueuedMessage) {
+    if (!session) return;
+    setQueueBusy(item.id); setSendError(null);
+    try {
+      const auth = await token();
+      const result = await sendFollowUp(auth, session.id, item.prompt, true);
+      if (!("steered" in result) && result.queued) {
+        await deleteQueuedMessage(auth, session.id, result.queuedMessage.id);
+        setSendError("The agent hasn't started yet. This message will run next.");
+        return;
+      }
+      await deleteQueuedMessage(auth, session.id, item.id).catch(() => undefined);
+      setQueued(list => list.filter(entry => entry.id !== item.id));
+      pinned.current = true;
+      setMessages(list => [...list, {seq: Number.MAX_SAFE_INTEGER - list.length, role: "user", content: item.prompt, createdAt: new Date().toISOString()}]);
+      if (!("steered" in result)) { setActivity(initialActivity); setSession(result.session); }
+    } catch (failure) {
+      setSendError(errorText(failure, "Couldn't steer with that message. Try again."));
+    } finally { setQueueBusy(null); }
   }
 
   // Approving switches this session to Build for its next turn, keeping the conversation together.
@@ -262,20 +297,38 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                 <div className="relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-6 sm:pb-5">
                   <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-[#131211] to-transparent" />
                   <AnimatePresence initial={false}>
-                    {queued.map(item => (
-                      <motion.div key={item.id} layout initial={{opacity: 0, y: 8, height: 0}} animate={{opacity: 1, y: 0, height: "auto"}} exit={{opacity: 0, height: 0}} transition={{duration: 0.35, ease: EASE}}
-                        className="mx-3 mb-1.5 overflow-hidden">
-                        <div className="flex items-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2 text-[13px]">
-                          <span className="shrink-0 text-[11px] text-gray-500">Queued</span>
-                          <span className="truncate text-gray-300">{item.prompt}</span>
-                        </div>
-                      </motion.div>
-                    ))}
+                    {queued.length > 0 && (
+                      <motion.section key="queue" aria-label="Queued messages" initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 6}} transition={{duration: 0.25, ease: EASE}}
+                        className="mx-4 -mb-px rounded-t-2xl border border-b-0 border-white/[0.07] bg-[#1a1918] px-1.5 pb-1.5 pt-2">
+                        <p className="px-2.5 pb-1 text-[11.5px] text-gray-500">Queued <span className="tabular-nums">{queued.length}</span></p>
+                        <ul>
+                          <AnimatePresence initial={false}>
+                            {queued.map(item => (
+                              <motion.li key={item.id} layout initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: "auto"}} exit={{opacity: 0, height: 0}} transition={{duration: 0.25, ease: EASE}} className="overflow-hidden">
+                                <div className="group flex items-center gap-2 rounded-lg py-1.5 pl-2.5 pr-1 hover:bg-white/[0.03]">
+                                  <span className="min-w-0 flex-1 truncate text-[13px] text-[#E1E0CC]/80" title={item.prompt}>{item.prompt}</span>
+                                  {working && (
+                                    <button type="button" onClick={() => void steerQueued(item)} disabled={queueBusy !== null} aria-label={`Steer with: ${item.prompt}`}
+                                      className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-[#E1E0CC] disabled:opacity-40">
+                                      <CornerDownRight aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />Steer
+                                    </button>
+                                  )}
+                                  <button type="button" onClick={() => void removeQueued(item.id)} disabled={queueBusy !== null} aria-label={`Remove queued message: ${item.prompt}`}
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-white/[0.06] hover:text-[#E1E0CC] disabled:opacity-40">
+                                    <X aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </motion.li>
+                            ))}
+                          </AnimatePresence>
+                        </ul>
+                      </motion.section>
+                    )}
                   </AnimatePresence>
-                  <Composer label="Message the agent" placeholder={session ? (working ? "Queue a follow-up…" : "Ask for a change…") : "Describe what to build"}
+                  <Composer label="Message the agent" placeholder={session ? (working ? "Queue a follow-up, or steer the current run…" : "Ask for a change…") : "Describe what to build"}
                     models={composerModels(account.me)} session={session ? {model: session.model, effort: session.effort, mode: session.mode} : undefined}
                     onSubmit={async (prompt, model, options) => { const accepted = await submit(prompt, model, options); setRefreshKey(key => key + 1); return accepted; }}
-                    isWorking={working} isStopping={stopping || activity.phase === "cancel"} onStop={() => void stop()} queuedCount={queued.length} error={sendError} />
+                    isWorking={working} isStopping={stopping || activity.phase === "cancel"} onStop={() => void stop()} error={sendError} />
                 </div>
               </section>
 

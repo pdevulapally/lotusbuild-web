@@ -70,6 +70,12 @@ export async function listQueuedMessages(token: string, sessionId: string): Prom
   return queuedMessages;
 }
 
+export function deleteQueuedMessage(token: string, sessionId: string, messageId: string) {
+  return apiRequest<void>(
+    `/sessions/${encodeURIComponent(sessionId)}/queued-messages/${encodeURIComponent(messageId)}`, {method: "DELETE", token},
+  );
+}
+
 export function cancelSession(token: string, sessionId: string) {
   return apiRequest<Session>(`/sessions/${encodeURIComponent(sessionId)}/cancel`, {method: "POST", token});
 }

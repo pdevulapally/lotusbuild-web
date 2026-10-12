@@ -1,13 +1,13 @@
 import {LIMITS} from "@/lib/security/validation";
 import {AnimatePresence, motion} from "framer-motion";
-import {ArrowUp, Check, ChevronDown, Gauge, Hammer, ListChecks, Loader2, Square, type LucideIcon} from "lucide-react";
+import {ArrowUp, Check, ChevronDown, CornerDownRight, Gauge, Hammer, ListChecks, Loader2, Square, type LucideIcon} from "lucide-react";
 import {useEffect, useId, useRef, useState, type KeyboardEvent} from "react";
 
 import type {AgentModel} from "@/lib/api/me";
 import type {AiEffort, SessionMode} from "@/lib/api/sessions";
 import {EASE} from "@/lib/motion";
 
-export type ComposerOptions = {effort?: AiEffort; mode: SessionMode};
+export type ComposerOptions = {effort?: AiEffort; mode: SessionMode; steer?: boolean};
 type Option = {value: string; label: string; description?: string; Icon?: LucideIcon};
 
 const EFFORT_COPY: Record<AiEffort, string> = {
@@ -87,7 +87,6 @@ export type ComposerProps = {
   isWorking?: boolean;
   isStopping?: boolean;
   onStop?: () => void;
-  queuedCount?: number;
   announcement?: string | null;
   error?: string | null;
   /** Lets a signed-out visitor submit (the caller then sends them to sign in). */
@@ -99,7 +98,7 @@ export type ComposerProps = {
 
 export function Composer({
   label, placeholder = "Describe what you want to build", onSubmit, models = [], session, isDisabled = false,
-  isWorking = false, isStopping = false, onStop, queuedCount = 0, announcement, error, allowWithoutModel = false,
+  isWorking = false, isStopping = false, onStop, announcement, error, allowWithoutModel = false,
   modelHint, size = "dock", className = "",
 }: ComposerProps) {
   const [value, setValue] = useState("");
@@ -124,14 +123,14 @@ export function Composer({
     element.style.height = `${Math.min(element.scrollHeight, 220)}px`;
   }, [value]);
 
-  async function submit() {
+  async function submit(steer = false) {
     const prompt = value.trim();
     if (!prompt || busy.current || disabled || !onSubmit) return;
     busy.current = true;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const accepted = await onSubmit(prompt, model, {mode: session?.mode ?? mode, ...(session || !effort ? {} : {effort})});
+      const accepted = await onSubmit(prompt, model, {mode: session?.mode ?? mode, ...(session || !effort ? {} : {effort}), ...(steer ? {steer} : {})});
       if (accepted !== false) setValue("");
     } catch {
       setSubmitError("Could not confirm delivery. Check the conversation before sending again.");
@@ -157,7 +156,7 @@ export function Composer({
           value={value}
           onChange={event => setValue(event.target.value)}
           onKeyDown={event => {
-            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); }
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(isWorking && !!session && (event.metaKey || event.ctrlKey)); }
           }}
           placeholder={placeholder}
           disabled={isDisabled}
@@ -182,15 +181,20 @@ export function Composer({
             ) : (
               <span className="px-2.5 py-1.5 text-xs text-gray-500">{modelHint ?? "Available models could not be loaded."}</span>
             )}
-            {queuedCount > 0 && <span className="px-1.5 text-[12.5px] text-gray-500">{queuedCount} queued</span>}
           </div>
+          {isWorking && session && value.trim() && (
+            <button type="button" onClick={() => void submit(true)} disabled={disabled} title="Send into the current run (Ctrl/⌘ + Enter)"
+              className={`${chip} shrink-0 border-white/[0.08] text-[#E1E0CC]/80 hover:border-white/20 hover:text-[#E1E0CC] disabled:opacity-40`}>
+              <CornerDownRight aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />Steer
+            </button>
+          )}
           {isWorking && onStop && !value.trim() ? (
             <button type="button" onClick={onStop} disabled={isStopping} aria-label={isStopping ? "Stopping agent" : "Stop agent"}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-black transition-transform hover:scale-105 disabled:opacity-50">
               {isStopping ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Square aria-hidden className="h-3.5 w-3.5 fill-current" />}
             </button>
           ) : (
-            <button type="submit" disabled={disabled || !value.trim()} aria-label={submitting ? "Sending" : isWorking ? "Queue follow-up" : "Send"}
+            <button type="submit" disabled={disabled || !value.trim()} aria-label={submitting ? "Sending" : isWorking ? "Add to queue" : "Send"}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-black transition-transform hover:scale-105 disabled:opacity-30 disabled:hover:scale-100">
               {submitting ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <ArrowUp aria-hidden className="h-4 w-4" />}
             </button>
