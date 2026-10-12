@@ -1,4 +1,4 @@
-import {apiRequest} from "./client";
+import {ApiError, apiRequest, baseUrl} from "./client";
 
 // One project as returned by GET /projects (toResponse in the backend's projects/routes.ts).
 export type Project = {
@@ -90,4 +90,22 @@ export async function getChanges(token: string, projectId: string, sha: string):
   const body = await apiRequest<ProjectChanges>(`/projects/${encodeURIComponent(projectId)}/changes/${sha}`, {token});
   if (!Array.isArray(body.files) || typeof body.patch !== "string") throw new Error("Invalid changes");
   return body;
+}
+
+// Owner-only zip of the saved version; fetched with the token, then handed to the browser as a download.
+export async function downloadProjectZip(token: string, projectId: string, fallbackName: string, ref?: string): Promise<void> {
+  const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+  const response = await fetch(`${baseUrl()}/projects/${encodeURIComponent(projectId)}/archive${query}`, {
+    headers: {Authorization: `Bearer ${token}`}, cache: "no-store",
+  });
+  if (!response.ok || response.headers.get("content-type") !== "application/zip") {
+    throw new ApiError(response.status, "project/archive-failed", response.status === 404 ? "There's no saved version to download yet." : "The download couldn't be prepared. Try again.");
+  }
+  const match = /filename="([a-z0-9-]{1,60})\.zip"/.exec(response.headers.get("content-disposition") ?? "");
+  const url = URL.createObjectURL(await response.blob());
+  const link = Object.assign(document.createElement("a"), {href: url, download: `${match?.[1] ?? fallbackName}.zip`});
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {CornerDownRight, FolderGit2, GitBranch, History as HistoryIcon, Monitor, PanelRightClose, X} from "lucide-react";
+import {Bell, BellRing, CornerDownRight, Download, FolderGit2, GitBranch, History as HistoryIcon, Monitor, PanelRightClose, X} from "lucide-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 
@@ -16,7 +16,7 @@ import {RunUsage} from "@/components/workspace/run-usage";
 import {errorText, iconButton, PanelIcon, WorkspaceShell} from "@/components/workspace/shell";
 import {ApiError} from "@/lib/api/client";
 import {composerModels} from "@/lib/api/me";
-import {getProject, getProjectFile, getProjectTree, type Project, type ProjectTree} from "@/lib/api/projects";
+import {getProject, getProjectFile, getProjectTree, type Project, type ProjectTree, downloadProjectZip} from "@/lib/api/projects";
 import {readSessionEvents, StreamClosedError} from "@/lib/api/session-events";
 import {cancelSession, createSession, deleteQueuedMessage, listMessages, listQueuedMessages, listSessions, sendFollowUp, type Message, type QueuedMessage, type Session} from "@/lib/api/sessions";
 import {EASE} from "@/lib/motion";
@@ -218,6 +218,35 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const runVisible = activity.entries.length > 0 || working || activity.phase === "failed";
   const project = loaded.status === "ready" ? loaded.project : null;
 
+  const [downloading, setDownloading] = useState(false);
+  async function download() {
+    if (!project || downloading) return;
+    setDownloading(true);
+    setSendError(null);
+    try { await downloadProjectZip(await token(), projectId, "project", branch ?? undefined); }
+    catch (failure) { setSendError(errorText(failure, "The download couldn't be prepared. Try again.")); }
+    finally { setDownloading(false); }
+  }
+
+  const canNotify = typeof window !== "undefined" && "Notification" in window;
+  const [notify, setNotify] = useState(() => canNotify && Notification.permission === "granted" && localStorage.getItem("lb.notify") === "on");
+  async function toggleNotify() {
+    if (!canNotify) return;
+    if (notify) { localStorage.setItem("lb.notify", "off"); setNotify(false); return; }
+    const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
+    if (permission !== "granted") { setSendError("Notifications are blocked for this site in your browser settings."); return; }
+    localStorage.setItem("lb.notify", "on");
+    setNotify(true);
+  }
+  const wasWorking = useRef(false);
+  useEffect(() => {
+    if (wasWorking.current && !working && notify && session && document.visibilityState === "hidden") {
+      const note = new Notification(session.status === "FAILED" ? "Build failed" : "Build finished", {body: project?.name ?? "LotusBuild", tag: session.id, icon: "/images/lotusbuild-logo.png"});
+      note.onclick = () => { window.focus(); note.close(); };
+    }
+    wasWorking.current = working;
+  }, [working, notify, session, project?.name]);
+
   // Undo is carried out by the agent in the project's sandbox, as a normal follow-up the user can see.
   const undoChange = (commit: {sha: string}) => {
     if (!session || working) return;
@@ -267,6 +296,16 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
             </AnimatePresence>
             {activity.save !== "unknown" && <span className={`hidden text-[11px] sm:block ${activity.save === "saved" ? "text-gray-500" : "text-rose-300/80"}`}>{activity.save === "saved" ? "Changes saved" : "Save failed"}</span>}
             <div className="ml-auto flex items-center gap-1.5">
+              {canNotify && (
+                <button type="button" onClick={() => void toggleNotify()} aria-pressed={notify} aria-label={notify ? "Stop build notifications" : "Notify me when builds finish"} title={notify ? "Notifications on" : "Notify me when builds finish"} className={iconButton}>
+                  {notify ? <BellRing aria-hidden strokeWidth={1.75} className="h-4 w-4 text-[#E1E0CC]" /> : <Bell aria-hidden strokeWidth={1.75} className="h-4 w-4" />}
+                </button>
+              )}
+              {project && tree.status === "ready" && tree.value.files.length > 0 && (
+                <button type="button" onClick={() => void download()} disabled={downloading} aria-label="Download project as zip" title="Download as zip" className={`${iconButton} disabled:opacity-40`}>
+                  <Download aria-hidden strokeWidth={1.75} className={`h-4 w-4 ${downloading ? "animate-pulse" : ""}`} />
+                </button>
+              )}
               {project && <ShareMenu account={account} projectId={projectId} />}
               <div role="tablist" aria-label="View" className="flex rounded-full border border-white/[0.07] p-0.5 text-[12px] lg:hidden">
                 {(["chat", "files", "changes", "desktop"] as const).map(name => (
