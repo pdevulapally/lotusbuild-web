@@ -114,3 +114,12 @@ export async function getSessionUsage(token: string, sessionId: string): Promise
   return body.meters.filter((item): item is RunUsage => !!item && typeof item === "object"
     && typeof (item as RunUsage).label === "string" && Number.isFinite((item as RunUsage).settled) && Number.isFinite((item as RunUsage).open));
 }
+
+// The account's newest runs across every project, for the notifications inbox.
+export type RecentSession = {id: string; projectId: string; status: SessionStatus; mode: SessionMode; messageCount: number; heartbeatAt: string | null; createdAt: string};
+export async function listRecentSessions(token: string): Promise<RecentSession[]> {
+  const body = await apiRequest<{sessions?: unknown}>("/me/sessions?limit=20", {token});
+  if (!Array.isArray(body.sessions)) throw new Error("Invalid activity");
+  return body.sessions.filter((item): item is RecentSession => !!item && typeof item === "object"
+    && typeof (item as RecentSession).id === "string" && typeof (item as RecentSession).projectId === "string" && typeof (item as RecentSession).createdAt === "string");
+}

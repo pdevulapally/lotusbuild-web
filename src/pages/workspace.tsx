@@ -1,5 +1,7 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {Bell, BellRing, CornerDownRight, Download, FolderGit2, GitBranch, History as HistoryIcon, Monitor, PanelRightClose, X} from "lucide-react";
+import {CornerDownRight, GitBranch, Monitor, PanelRightClose, X} from "lucide-react";
+import {NotificationsMenu} from "@/components/workspace/notifications";
+import {ProjectMenu} from "@/components/workspace/project-menu";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 
@@ -228,24 +230,6 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     finally { setDownloading(false); }
   }
 
-  const canNotify = typeof window !== "undefined" && "Notification" in window;
-  const [notify, setNotify] = useState(() => canNotify && Notification.permission === "granted" && localStorage.getItem("lb.notify") === "on");
-  async function toggleNotify() {
-    if (!canNotify) return;
-    if (notify) { localStorage.setItem("lb.notify", "off"); setNotify(false); return; }
-    const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
-    if (permission !== "granted") { setSendError("Notifications are blocked for this site in your browser settings."); return; }
-    localStorage.setItem("lb.notify", "on");
-    setNotify(true);
-  }
-  const wasWorking = useRef(false);
-  useEffect(() => {
-    if (wasWorking.current && !working && notify && session && document.visibilityState === "hidden") {
-      const note = new Notification(session.status === "FAILED" ? "Build failed" : "Build finished", {body: project?.name ?? "LotusBuild", tag: session.id, icon: "/images/lotusbuild-logo.png"});
-      note.onclick = () => { window.focus(); note.close(); };
-    }
-    wasWorking.current = working;
-  }, [working, notify, session, project?.name]);
 
   // Undo is carried out by the agent in the project's sandbox, as a normal follow-up the user can see.
   const undoChange = (commit: {sha: string}) => {
@@ -260,32 +244,17 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
         <>
           <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#131211]/80 px-3 backdrop-blur-xl sm:px-5">
             <button type="button" aria-label="Open sidebar" onClick={openSidebar} className={`${iconButton} md:hidden`}><PanelIcon /></button>
-            <div className="flex min-w-0 items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.02] py-1 pl-2.5 pr-1 text-[13px]">
-              <FolderGit2 aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary/70" />
-              <h1 className="min-w-0 max-w-[10rem] truncate text-[#E1E0CC] sm:max-w-[16rem]">{project?.name ?? (loaded.status === "loading" ? "" : "Project")}</h1>
-              {tree.status === "ready" && tree.value.branches.length > 0 && (
-                <label className="relative ml-1 flex items-center gap-1 rounded-full bg-white/[0.05] py-0.5 pl-2 pr-1 text-[12px] text-gray-300">
-                  <GitBranch aria-hidden className="h-3 w-3" /><span className="sr-only">Branch</span>
-                  <select value={branch ?? tree.value.ref ?? ""} onChange={event => setBranch(event.target.value)} className="max-w-[7rem] cursor-pointer appearance-none truncate bg-transparent pr-1 outline-none">
-                    {tree.value.branches.map(name => <option key={name} value={name} className="bg-[#141414]">{name}</option>)}
-                  </select>
-                </label>
-              )}
-              {runs.length > 0 && (
-                <label className="relative ml-1 hidden items-center gap-1 rounded-full bg-white/[0.05] py-0.5 pl-2 pr-1 text-[12px] text-gray-300 sm:flex">
-                  <HistoryIcon aria-hidden className="h-3 w-3" /><span className="sr-only">Run</span>
-                  <select value={session?.id ?? "new"} onChange={event => setPickedRun(event.target.value)} disabled={working} className="max-w-[9rem] cursor-pointer appearance-none truncate bg-transparent pr-1 outline-none disabled:cursor-not-allowed">
-                    {!session && <option value="new" className="bg-[#141414]">New run</option>}
-                    {runs.map((run, index) => (
-                      <option key={run.id} value={run.id} className="bg-[#141414]">
-                        Run {runs.length - index} · {new Date(run.createdAt).toLocaleDateString(undefined, {day: "numeric", month: "short"})}{run.status === "FAILED" ? " · failed" : ""}
-                      </option>
-                    ))}
-                    {session && <option value="new" className="bg-[#141414]">+ New run</option>}
-                  </select>
-                </label>
-              )}
-            </div>
+            <ProjectMenu account={account} project={project} runs={runs} currentRunId={session?.id ?? null} working={working}
+              onPickRun={setPickedRun} onRenamed={renamed => { setLoaded({status: "ready", project: renamed}); setRefreshKey(key => key + 1); }}
+              onDownload={project && tree.status === "ready" && tree.value.files.length > 0 ? () => void download() : null} downloading={downloading} />
+            {tree.status === "ready" && tree.value.branches.length > 0 && (
+              <label className="relative hidden h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-gray-200 sm:flex">
+                <GitBranch aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" /><span className="sr-only">Branch</span>
+                <select value={branch ?? tree.value.ref ?? ""} onChange={event => setBranch(event.target.value)} className="max-w-[8rem] cursor-pointer appearance-none truncate bg-transparent outline-none">
+                  {tree.value.branches.map(name => <option key={name} value={name} className="bg-[#23211f]">{name}</option>)}
+                </select>
+              </label>
+            )}
             <AnimatePresence mode="wait">
               {session && (working || session.status === "FAILED") && (
                 <motion.span key={working ? "working" : session.status} initial={{opacity: 0, scale: 0.9}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} transition={{duration: 0.25, ease: EASE}}
@@ -296,16 +265,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
             </AnimatePresence>
             {activity.save !== "unknown" && <span className={`hidden text-[11px] sm:block ${activity.save === "saved" ? "text-gray-500" : "text-rose-300/80"}`}>{activity.save === "saved" ? "Changes saved" : "Save failed"}</span>}
             <div className="ml-auto flex items-center gap-1.5">
-              {canNotify && (
-                <button type="button" onClick={() => void toggleNotify()} aria-pressed={notify} aria-label={notify ? "Stop build notifications" : "Notify me when builds finish"} title={notify ? "Notifications on" : "Notify me when builds finish"} className={iconButton}>
-                  {notify ? <BellRing aria-hidden strokeWidth={1.75} className="h-4 w-4 text-[#E1E0CC]" /> : <Bell aria-hidden strokeWidth={1.75} className="h-4 w-4" />}
-                </button>
-              )}
-              {project && tree.status === "ready" && tree.value.files.length > 0 && (
-                <button type="button" onClick={() => void download()} disabled={downloading} aria-label="Download project as zip" title="Download as zip" className={`${iconButton} disabled:opacity-40`}>
-                  <Download aria-hidden strokeWidth={1.75} className={`h-4 w-4 ${downloading ? "animate-pulse" : ""}`} />
-                </button>
-              )}
+              <NotificationsMenu account={account} />
               {project && <ShareMenu account={account} projectId={projectId} />}
               <div role="tablist" aria-label="View" className="flex rounded-full border border-white/[0.07] p-0.5 text-[12px] lg:hidden">
                 {(["chat", "files", "changes", "desktop"] as const).map(name => (

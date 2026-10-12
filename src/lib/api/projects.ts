@@ -109,3 +109,7 @@ export async function downloadProjectZip(token: string, projectId: string, fallb
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
+
+export function renameProject(token: string, projectId: string, name: string) {
+  return apiRequest<Project>(`/projects/${encodeURIComponent(projectId)}`, {method: "PATCH", token, body: {name}});
+}
