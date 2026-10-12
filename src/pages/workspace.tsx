@@ -5,6 +5,7 @@ import {Link, useParams} from "react-router-dom";
 
 import {Composer, type ComposerOptions} from "@/components/composer";
 import type {ReadyAccount} from "@/components/require-account";
+import {ChangesPanel} from "@/components/workspace/changes-panel";
 import {DesktopPanel} from "@/components/workspace/desktop-panel";
 import {FilesPanel} from "@/components/workspace/files-panel";
 import {parsePlan, PlanTool} from "@/components/workspace/plan-tool";
@@ -39,8 +40,8 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const [sendError, setSendError] = useState<string | null>(null);
   const [showDesktop, setShowDesktop] = useState(true);
   const [approving, setApproving] = useState(false);
-  const [pane, setPane] = useState<"files" | "desktop">("desktop");
-  const [tab, setTab] = useState<"chat" | "files" | "desktop">("chat");
+  const [pane, setPane] = useState<"files" | "changes" | "desktop">("desktop");
+  const [tab, setTab] = useState<"chat" | "files" | "changes" | "desktop">("chat");
   const [branch, setBranch] = useState<string | undefined>();
   const [tree, setTree] = useState<{status: "loading"} | {status: "error"; message: string} | {status: "ready"; value: ProjectTree}>({status: "loading"});
   const [refreshKey, setRefreshKey] = useState(0);
@@ -206,6 +207,13 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const runVisible = activity.entries.length > 0 || working || activity.phase === "failed";
   const project = loaded.status === "ready" ? loaded.project : null;
 
+  // Undo is carried out by the agent in the project's sandbox, as a normal follow-up the user can see.
+  const undoChange = (commit: {sha: string}) => {
+    if (!session || working) return;
+    void submit(`Undo the changes saved in version ${commit.sha.slice(0, 12)}: run \`git revert --no-edit ${commit.sha}\`, resolve any conflicts, and tell me what was reverted.`, session.model, {mode: "build"});
+  };
+  const changesPanel = <ChangesPanel projectId={projectId} token={token} refreshKey={refreshKey + messages.length} canUndo={!!session && !working} onUndo={undoChange} />;
+
   return (
     <WorkspaceShell account={account} activeProjectId={projectId} refreshKey={refreshKey}>
       {({openSidebar}) => (
@@ -236,7 +244,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
             <div className="ml-auto flex items-center gap-1.5">
               {project && <ShareMenu account={account} projectId={projectId} />}
               <div role="tablist" aria-label="View" className="flex rounded-full border border-white/[0.07] p-0.5 text-[12px] lg:hidden">
-                {(["chat", "files", "desktop"] as const).map(name => (
+                {(["chat", "files", "changes", "desktop"] as const).map(name => (
                   <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}
                     className={`rounded-full px-2.5 py-1 capitalize transition-colors duration-300 ${tab === name ? "bg-white/[0.08] text-[#E1E0CC]" : "text-gray-500"}`}>{name}</button>
                 ))}
@@ -338,7 +346,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                     className="hidden min-h-0 shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#181716] lg:block">
                     <div className="flex h-full flex-col">
                       <div role="tablist" aria-label="Panel" className="flex h-11 shrink-0 items-center gap-1 border-b border-white/[0.06] px-3">
-                        {(["files", "desktop"] as const).map(name => (
+                        {(["files", "changes", "desktop"] as const).map(name => (
                           <button key={name} type="button" role="tab" aria-selected={pane === name} onClick={() => setPane(name)}
                             className={`relative rounded-full px-3 py-1 text-[12px] capitalize transition-colors duration-300 ${pane === name ? "text-[#E1E0CC]" : "text-gray-500 hover:text-gray-300"}`}>
                             {pane === name && <motion.span layoutId="pane-pill" transition={{duration: 0.35, ease: EASE}} className="absolute inset-0 rounded-full bg-white/[0.07]" />}
@@ -348,7 +356,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                         {pane === "files" && <span className="ml-auto text-[11px] text-gray-600">Last saved version</span>}
                       </div>
                       <div className="min-h-0 flex-1">
-                        {pane === "files" ? <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} /> : <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
+                        {pane === "files" ? <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} /> : pane === "changes" ? changesPanel : <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
                       </div>
                     </div>
                   </motion.aside>
@@ -356,6 +364,9 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
               </AnimatePresence>
               <section aria-label="Files" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "files" ? "block" : "hidden"}`}>
                 {tab === "files" && <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} />}
+              </section>
+              <section aria-label="Changes" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "changes" ? "block" : "hidden"}`}>
+                {tab === "changes" && changesPanel}
               </section>
               <section aria-label="Desktop" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "desktop" ? "block" : "hidden"}`}>
                 {tab === "desktop" && <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}

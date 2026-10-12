@@ -70,3 +70,24 @@ export function getSharedTree(projectId: string, shareToken?: string, ref?: stri
 export function getSharedFile(projectId: string, path: string, shareToken?: string, ref?: string) {
   return apiRequest<ProjectFile>(`/shared/projects/${encodeURIComponent(projectId)}/files/content${query({token: shareToken, path, ref})}`);
 }
+
+export type ProjectCommit = {sha: string; parent: string | null; committedAt: string; sessionId: string | null; message: string};
+export type ChangedFile = {path: string; previousPath: string | null; additions: number | null; deletions: number | null};
+export type ProjectChanges = {sha: string; files: ChangedFile[]; patch: string; truncated: boolean};
+
+const SHA = /^[0-9a-f]{40,64}$/;
+
+// Source: backend src/projects/content-routes.ts (owner-only, read from the saved git snapshot).
+export async function listChanges(token: string, projectId: string): Promise<ProjectCommit[]> {
+  const body = await apiRequest<{commits?: unknown}>(`/projects/${encodeURIComponent(projectId)}/changes`, {token});
+  if (!Array.isArray(body.commits)) throw new Error("Invalid change history");
+  return body.commits.filter((item): item is ProjectCommit =>
+    !!item && typeof item === "object" && SHA.test((item as ProjectCommit).sha) && typeof (item as ProjectCommit).committedAt === "string");
+}
+
+export async function getChanges(token: string, projectId: string, sha: string): Promise<ProjectChanges> {
+  if (!SHA.test(sha)) throw new Error("Invalid change");
+  const body = await apiRequest<ProjectChanges>(`/projects/${encodeURIComponent(projectId)}/changes/${sha}`, {token});
+  if (!Array.isArray(body.files) || typeof body.patch !== "string") throw new Error("Invalid changes");
+  return body;
+}
