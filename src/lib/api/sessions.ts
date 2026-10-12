@@ -75,11 +75,12 @@ export function cancelSession(token: string, sessionId: string) {
 }
 
 // Sends a follow-up prompt into an existing session.
-export async function sendFollowUp(token: string, sessionId: string, prompt: string, steer = false) {
+// `mode` switches an idle session (e.g. an approved plan moves to build) for its next turn.
+export async function sendFollowUp(token: string, sessionId: string, prompt: string, steer = false, mode?: SessionMode) {
   const response = await apiRequest<unknown>(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: "POST",
     token,
-    body: {prompt, ...(steer ? {steer: true} : {})},
+    body: {prompt, ...(steer ? {steer: true} : {}), ...(mode ? {mode} : {})},
   });
   return parseFollowUpResponse(response);
 }

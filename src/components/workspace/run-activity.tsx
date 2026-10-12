@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {Check, ChevronRight, FilePen, Monitor, Search, Terminal, X} from "lucide-react";
+import {Check, ChevronRight, Circle, CircleCheck, FilePen, Monitor, Search, Terminal, X} from "lucide-react";
 import {useEffect, useState} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,10 +7,20 @@ import remarkGfm from "remark-gfm";
 import {EASE} from "@/lib/motion";
 import type {Activity} from "@/lib/workspace/activity";
 
+// Tick emoji at the start of a line become task items, so they render as icons rather than emoji.
+const TICK = /^(\s*)(?:(?:[-*+]|\d+\.)\s+)?(?:✅|✔️|✔|☑️)\s*/gm;
+const BOX = /^(\s*)(?:(?:[-*+]|\d+\.)\s+)?(?:⬜|☐|🔲)\s*/gm;
+const tidy = (text: string) => text.replace(TICK, "$1- [x] ").replace(BOX, "$1- [ ] ");
+
 export function Markdown({text, streaming}: {text: string; streaming?: boolean}) {
   return (
-    <div className={`markdown ${streaming ? "streaming" : ""} text-[15px] leading-7 text-[#E1E0CC]/90 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-xl [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h3]:mt-3 [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-white/[0.06] [&_pre]:bg-black/40 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-3 [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_ul]:list-disc [&_ul]:pl-5`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>}}>{text}</ReactMarkdown>
+    <div className={`markdown ${streaming ? "streaming" : ""} text-[15px] leading-7 text-[#E1E0CC]/90 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-xl [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h3]:mt-3 [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-white/[0.06] [&_pre]:bg-black/40 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-3 [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_ul]:list-disc [&_ul]:pl-5 [&_.contains-task-list]:pl-0 [&_.task-list-item]:relative [&_.task-list-item]:list-none [&_.task-list-item]:pl-7`}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+        a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
+        input: ({type, checked}) => type === "checkbox"
+          ? checked ? <CircleCheck aria-label="Done" className="absolute left-0 top-[5px] h-[17px] w-[17px] text-primary" /> : <Circle aria-label="Not done" className="absolute left-0 top-[5px] h-[17px] w-[17px] text-gray-600" />
+          : null,
+      }}>{tidy(text)}</ReactMarkdown>
     </div>
   );
 }

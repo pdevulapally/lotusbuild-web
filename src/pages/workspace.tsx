@@ -7,7 +7,9 @@ import {Composer, type ComposerOptions} from "@/components/composer";
 import type {ReadyAccount} from "@/components/require-account";
 import {DesktopPanel} from "@/components/workspace/desktop-panel";
 import {FilesPanel} from "@/components/workspace/files-panel";
+import {parsePlan, PlanTool} from "@/components/workspace/plan-tool";
 import {ShareMenu} from "@/components/workspace/share-menu";
+import {UserMessage} from "@/components/workspace/user-message";
 import {Markdown, RunActivity} from "@/components/workspace/run-activity";
 import {errorText, iconButton, PanelIcon, WorkspaceShell} from "@/components/workspace/shell";
 import {ApiError} from "@/lib/api/client";
@@ -35,6 +37,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const [stopping, setStopping] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [showDesktop, setShowDesktop] = useState(true);
+  const [approving, setApproving] = useState(false);
   const [pane, setPane] = useState<"files" | "desktop">("desktop");
   const [tab, setTab] = useState<"chat" | "files" | "desktop">("chat");
   const [branch, setBranch] = useState<string | undefined>();
@@ -138,6 +141,24 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     }
   }
 
+  // Approving switches this session to Build for its next turn, keeping the conversation together.
+  async function approvePlan(plan: string) {
+    if (!session) return;
+    const checked = checkPrompt(`Implement this approved plan:\n\n${plan}`);
+    if (!checked.ok) { setSendError(checked.error); return; }
+    setApproving(true); setSendError(null);
+    try {
+      const result = await sendFollowUp(await token(), session.id, checked.value, false, "build");
+      if ("steered" in result || result.queued) { setSendError("The agent is still busy. Approve again once it finishes."); return; }
+      pinned.current = true;
+      setActivity(initialActivity);
+      setMessages(list => [...list, {seq: Number.MAX_SAFE_INTEGER - list.length, role: "user", content: checked.value, createdAt: new Date().toISOString()}]);
+      setSession(result.session);
+    } catch (failure) {
+      setSendError(errorText(failure, "The build couldn't start. Try again."));
+    } finally { setApproving(false); }
+  }
+
   async function stop() {
     if (!session) return;
     setStopping(true);
@@ -146,6 +167,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   }
 
   const lastUser = messages.map(message => message.role).lastIndexOf("user");
+  const lastAssistant = messages.map(message => message.role).lastIndexOf("assistant");
   const runVisible = activity.entries.length > 0 || working || activity.phase === "failed";
   const project = loaded.status === "ready" ? loaded.project : null;
 
@@ -168,11 +190,10 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
               )}
             </div>
             <AnimatePresence mode="wait">
-              {session && (
+              {session && (working || session.status === "FAILED") && (
                 <motion.span key={working ? "working" : session.status} initial={{opacity: 0, scale: 0.9}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} transition={{duration: 0.25, ease: EASE}}
                   className="hidden shrink-0 items-center gap-1.5 rounded-full border border-white/[0.07] px-2.5 py-0.5 text-[11px] text-gray-400 sm:flex">
-                  <span className={`h-1.5 w-1.5 rounded-full ${working ? "animate-pulse bg-primary" : session.status === "FAILED" ? "bg-rose-300" : "bg-emerald-300/80"}`} />
-                  {working ? (stream === "reconnecting" ? "Reconnecting" : "Working") : session.status === "FAILED" ? "Failed" : "Ready"}
+                  <span className={working ? "text-shimmer" : "text-rose-200/80"}>{working ? (stream === "reconnecting" ? "Reconnecting" : "Working") : "Failed"}</span>
                 </motion.span>
               )}
             </AnimatePresence>
@@ -211,7 +232,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
             <div className="flex min-h-0 flex-1">
               <section aria-label="Conversation" className={`relative min-w-0 flex-1 flex-col ${tab === "chat" ? "flex" : "hidden"} lg:flex`}>
                 <div ref={scroller} onScroll={event => { const el = event.currentTarget; pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }}
-                  className="min-h-0 flex-1 overflow-y-auto">
+                  className="chat-scroll min-h-0 flex-1 overflow-y-auto">
                   {!session ? (
                     <motion.div initial={{opacity: 0, y: 12}} animate={{opacity: 1, y: 0}} transition={{duration: 0.6, ease: EASE}} className="flex h-full items-center justify-center px-6">
                       <h2 className="text-center text-2xl tracking-[-0.02em] sm:text-3xl">What should we build in {project.name}?</h2>
@@ -220,10 +241,13 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-10 pt-8 sm:px-6">
                       {messages.map((message, index) => (
                         <div key={`${message.seq}-${index}`} className="contents">
-                          <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{duration: 0.45, ease: EASE}}
-                            className={message.role === "user" ? "ml-auto max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-white/[0.06] px-4 py-2.5 text-[15px] leading-6" : "min-w-0"}>
-                            {message.role === "user" ? message.content : <Markdown text={message.content} />}
-                          </motion.div>
+                          {message.role === "user" ? (
+                            <UserMessage content={message.content} canEdit={!working} onEdit={async text => (await submit(text, session.model, {...(session.effort ? {effort: session.effort} : {}), mode: session.mode})) !== false} />
+                          ) : session.mode === "plan" && index === lastAssistant ? (
+                            <PlanTool plan={parsePlan(message.content)} approved={false} approving={approving} onApprove={working ? undefined : () => void approvePlan(message.content)} />
+                          ) : (
+                            <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{duration: 0.45, ease: EASE}} className="min-w-0"><Markdown text={message.content} /></motion.div>
+                          )}
                           {index === lastUser && runVisible && <RunActivity activity={activity} working={working} />}
                         </div>
                       ))}
