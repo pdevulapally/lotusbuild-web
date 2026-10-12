@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from "framer-motion";
-import {CornerDownRight, FolderGit2, GitBranch, Monitor, PanelRightClose, X} from "lucide-react";
+import {CornerDownRight, FolderGit2, GitBranch, History as HistoryIcon, Monitor, PanelRightClose, X} from "lucide-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 
@@ -49,16 +49,26 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const pinned = useRef(true);
   const token = useCallback(() => account.user.getIdToken(), [account.user]);
 
+  const [runs, setRuns] = useState<Session[]>([]);
+  const [pickedRun, setPickedRun] = useState<string | null>(null);
+  useEffect(() => setPickedRun(null), [projectId]);
+
   const refresh = useCallback(async () => {
     const auth = await token();
     const project = await getProject(auth, projectId);
-    const latest = [...await listSessions(auth, projectId)].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+    const all = [...await listSessions(auth, projectId)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const latest = pickedRun === "new" ? null : all.find(item => item.id === pickedRun) ?? all[0] ?? null;
+    setRuns(all);
     const [history, waiting] = latest ? await Promise.all([listMessages(auth, latest.id), listQueuedMessages(auth, latest.id)]) : [[], []];
     setLoaded({status: "ready", project});
     setSession(latest);
     setMessages([...history].sort((a, b) => a.seq - b.seq));
     setQueued(waiting);
-  }, [projectId, token]);
+  }, [projectId, token, pickedRun]);
+
+  useEffect(() => {
+    if (session) setRuns(list => list.some(item => item.id === session.id) ? list.map(item => item.id === session.id ? session : item) : [session, ...list]);
+  }, [session]);
 
   useEffect(() => {
     setLoaded({status: "loading"});
@@ -228,6 +238,20 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                   <GitBranch aria-hidden className="h-3 w-3" /><span className="sr-only">Branch</span>
                   <select value={branch ?? tree.value.ref ?? ""} onChange={event => setBranch(event.target.value)} className="max-w-[7rem] cursor-pointer appearance-none truncate bg-transparent pr-1 outline-none">
                     {tree.value.branches.map(name => <option key={name} value={name} className="bg-[#141414]">{name}</option>)}
+                  </select>
+                </label>
+              )}
+              {runs.length > 0 && (
+                <label className="relative ml-1 hidden items-center gap-1 rounded-full bg-white/[0.05] py-0.5 pl-2 pr-1 text-[12px] text-gray-300 sm:flex">
+                  <HistoryIcon aria-hidden className="h-3 w-3" /><span className="sr-only">Run</span>
+                  <select value={session?.id ?? "new"} onChange={event => setPickedRun(event.target.value)} disabled={working} className="max-w-[9rem] cursor-pointer appearance-none truncate bg-transparent pr-1 outline-none disabled:cursor-not-allowed">
+                    {!session && <option value="new" className="bg-[#141414]">New run</option>}
+                    {runs.map((run, index) => (
+                      <option key={run.id} value={run.id} className="bg-[#141414]">
+                        Run {runs.length - index} · {new Date(run.createdAt).toLocaleDateString(undefined, {day: "numeric", month: "short"})}{run.status === "FAILED" ? " · failed" : ""}
+                      </option>
+                    ))}
+                    {session && <option value="new" className="bg-[#141414]">+ New run</option>}
                   </select>
                 </label>
               )}
