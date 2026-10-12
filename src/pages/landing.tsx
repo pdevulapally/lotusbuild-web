@@ -18,7 +18,7 @@ export default function LandingPage() {
       <Features />
       <section className="px-4 pb-6 sm:px-6">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-2xl md:rounded-[2rem]">
-          <img className="absolute inset-0 h-full w-full object-cover" src="/images/mountain-loch.webp" alt="" loading="lazy" />
+          <img className="absolute inset-0 h-full w-full object-cover" src="/images/canvas.webp" alt="" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
           <div className="relative flex flex-col items-center gap-6 px-6 py-24 text-center md:py-32">
             <h2 className="text-balance text-3xl font-normal leading-[1.05] tracking-[-0.02em] sm:text-4xl md:text-5xl" style={{color: "#E1E0CC"}}>Start your first project.</h2>

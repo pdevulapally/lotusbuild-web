@@ -1,3 +1,4 @@
+import {openConsentSettings} from "@/components/cookie-banner";
 import {ArrowUpRight} from "lucide-react";
 import {Link} from "react-router-dom";
 
@@ -5,9 +6,10 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
-      {label: "How it works", href: "#demo"},
-      {label: "Agent", href: "#how"},
-      {label: "Features", href: "#features"},
+      {label: "How it works", href: "/#demo"},
+      {label: "Agent", href: "/#how"},
+      {label: "Features", href: "/#features"},
+      {label: "Pricing", href: "/pricing"},
     ],
   },
   {
@@ -18,13 +20,21 @@ const COLUMNS = [
       {label: "Projects", href: "/projects"},
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      {label: "Terms", href: "/terms"},
+      {label: "Privacy", href: "/privacy"},
+      {label: "Cookie policy", href: "/privacy#cookies"},
+    ],
+  },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="px-4 pb-6 sm:px-6">
       <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#101010] ring-1 ring-white/5 md:rounded-[2rem]">
-        <div className="grid gap-12 px-6 py-12 sm:px-10 md:grid-cols-[1.4fr_1fr_1fr] md:py-16">
+        <div className="grid gap-12 px-6 py-12 sm:px-10 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:py-16">
           <div className="flex flex-col gap-5">
             <Link to="/" aria-label="LotusBuild home" className="w-fit">
               <img src="/images/lotusbuild-logo.png" alt="LotusBuild" className="h-7 w-auto invert" />
@@ -57,7 +67,7 @@ export function SiteFooter() {
         </div>
         <div className="flex flex-col items-center justify-between gap-3 border-t border-white/5 px-6 py-5 text-xs text-gray-500 sm:flex-row sm:px-10">
           <span>© {new Date().getFullYear()} LotusBuild. All rights reserved.</span>
-          <a href="#top" className="transition-colors hover:text-[#E1E0CC]">Back to top ↑</a>
+          <div className="flex items-center gap-5"><button type="button" onClick={openConsentSettings} className="transition-colors hover:text-[#E1E0CC]">Cookie settings</button><a href="#top" className="transition-colors hover:text-[#E1E0CC]">Back to top ↑</a></div>
         </div>
       </div>
     </footer>

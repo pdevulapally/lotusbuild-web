@@ -5,9 +5,10 @@ import {Link} from "react-router-dom";
 import {useAuthState} from "@/lib/auth/use-auth-state";
 
 const NAV = [
-  {label: "How it works", href: "#demo"},
-  {label: "Agent", href: "#how"},
-  {label: "Features", href: "#features"},
+  {label: "How it works", href: "/#demo"},
+  {label: "Agent", href: "/#how"},
+  {label: "Features", href: "/#features"},
+  {label: "Pricing", href: "/pricing"},
 ];
 
 export function SiteHeader() {
@@ -33,20 +34,20 @@ export function SiteHeader() {
           <ul className="flex items-center gap-1 text-sm">
             {NAV.map(item => (
               <li key={item.label}>
-                <a href={item.href} className="rounded-full px-4 py-2 text-primary/70 transition-colors hover:bg-white/5 hover:text-[#E1E0CC]">{item.label}</a>
+                <Link to={item.href} className="rounded-full px-4 py-2 text-primary/70 transition-colors duration-300 hover:bg-white/5 hover:text-[#E1E0CC]">{item.label}</Link>
               </li>
             ))}
           </ul>
         </nav>
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          {!signedIn && <Link to="/sign-in" className="hidden rounded-full px-4 py-2 text-sm text-primary/70 transition-colors hover:text-[#E1E0CC] sm:block">Sign in</Link>}
+          {auth === "unknown" ? <span role="status" aria-label="Checking sign-in" className="h-10 w-36 animate-pulse rounded-full bg-white/10" /> : <>{!signedIn && <Link to="/sign-in" className="hidden rounded-full px-4 py-2 text-sm text-primary/70 transition-colors hover:text-[#E1E0CC] sm:block">Sign in</Link>}
           <Link to={signedIn ? "/projects" : "/sign-up"}
             className="group inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-4 pr-1 text-sm font-medium text-black transition-all hover:gap-3">
             {signedIn ? "Open app" : "Start building"}
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black transition-transform group-hover:scale-105">
               <ArrowRight aria-hidden className="h-3.5 w-3.5" style={{color: "#E1E0CC"}} />
             </span>
-          </Link>
+          </Link></>}
         </div>
       </div>
     </header>

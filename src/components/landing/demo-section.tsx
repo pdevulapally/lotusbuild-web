@@ -14,8 +14,10 @@ export function DemoSection() {
             {text: "while you watch.", className: "font-normal"},
           ]} />
         </h2>
-        <motion.div className="mt-12" initial={{opacity: 0, y: 30}} whileInView={{opacity: 1, y: 0}} viewport={{once: true, margin: "-100px"}}
+        <motion.div className="relative isolate mt-12 overflow-hidden rounded-2xl px-3 py-10 sm:px-10 sm:py-16 md:rounded-[2rem]" initial={{opacity: 0, y: 30}} whileInView={{opacity: 1, y: 0}} viewport={{once: true, margin: "-100px"}}
           transition={{duration: 0.9, ease: [0.22, 1, 0.36, 1]}}>
+          <img className="absolute inset-0 -z-10 h-full w-full object-cover" src="/images/mountain-loch.webp" alt="" loading="lazy" />
+          <div className="absolute inset-0 -z-10 bg-black/25" />
           <WorkflowDemo />
         </motion.div>
       </div>

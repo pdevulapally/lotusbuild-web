@@ -1,3 +1,4 @@
+import {LIMITS} from "@/lib/security/validation";
 import {ArrowUp, Check, ChevronDown, Loader2, Square} from "lucide-react";
 import {useEffect, useId, useRef, useState, type KeyboardEvent} from "react";
 
@@ -132,12 +133,13 @@ export function Composer({
       <form
         aria-label={label}
         onSubmit={event => { event.preventDefault(); void submit(); }}
-        className={`rounded-[1.75rem] border border-white/10 bg-[#101010]/90 p-2 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-colors focus-within:border-primary/30 ${hero ? "sm:p-3" : ""}`}>
+        className={`rounded-[1.75rem] border p-2 transition-colors ${hero ? "border-white/15 bg-[#1b1712]/60 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150 focus-within:border-white/30 sm:p-3" : "border-white/10 bg-[#101010]/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl focus-within:border-primary/30"}`}>
         <label className="sr-only" htmlFor={`${label}-input`}>{label}</label>
         <textarea
           id={`${label}-input`}
           ref={textarea}
           rows={hero ? 3 : 2}
+          maxLength={LIMITS.prompt}
           value={value}
           onChange={event => setValue(event.target.value)}
           onKeyDown={event => {
@@ -145,7 +147,7 @@ export function Composer({
           }}
           placeholder={placeholder}
           disabled={isDisabled}
-          className={`block w-full resize-none bg-transparent px-3 pt-2 text-[#E1E0CC] outline-none placeholder:text-gray-500 disabled:opacity-60 ${hero ? "text-base sm:text-lg" : "text-sm sm:text-[15px]"}`}
+          className={`block w-full resize-none bg-transparent px-3 pt-2 text-[#E1E0CC] outline-none disabled:opacity-60 ${hero ? "text-base placeholder:text-[#E1E0CC]/70 sm:text-lg" : "placeholder:text-gray-500"} ${hero ? "text-base sm:text-lg" : "text-sm sm:text-[15px]"}`}
         />
         <div className="mt-1 flex items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">

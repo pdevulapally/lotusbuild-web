@@ -30,8 +30,8 @@ export function Hero() {
         </div>
 
         <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 right-0 px-4 sm:px-6 md:px-10">
-          <p className="font-medium leading-[0.78] tracking-[-0.07em] text-[18.5vw] opacity-90 lg:text-[17.5vw]" style={{color: "#E1E0CC"}}>
-            <WordsPullUp text="LotusBuild" showAsterisk className="translate-y-[0.12em]" />
+          <p className="text-center font-medium leading-[0.78] tracking-[-0.07em] text-[17vw] opacity-90 lg:text-[16vw]" style={{color: "#E1E0CC"}}>
+            <WordsPullUp text="LotusBuild" showAsterisk className="translate-y-[0.12em] justify-center pl-[0.35em]" />
           </p>
         </div>
       </div>

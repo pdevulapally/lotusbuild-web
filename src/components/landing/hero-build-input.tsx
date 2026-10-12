@@ -1,3 +1,4 @@
+import {checkPrompt} from "@/lib/security/validation";
 import {useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 
@@ -18,6 +19,9 @@ export function HeroBuildInput() {
 
   async function submit(prompt: string, model: string, options: Parameters<typeof startBuild>[3]) {
     if (account.status !== "ready") { navigate("/sign-in"); return false; }
+    const checked = checkPrompt(prompt);
+    if (!checked.ok) { setError(checked.error); return false; }
+    prompt = checked.value;
     setBusy(true);
     setError(null);
     setCreatedId(null);

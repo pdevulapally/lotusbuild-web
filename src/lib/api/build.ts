@@ -1,3 +1,4 @@
+import {checkPrompt} from "@/lib/security/validation";
 import {createProject} from "./projects";
 import {createSession, type AiEffort, type SessionMode} from "./sessions";
 
@@ -26,6 +27,9 @@ export async function startBuild(
   model: string,
   options?: {effort?: AiEffort; mode?: SessionMode},
 ): Promise<string> {
+  const checked = checkPrompt(prompt);
+  if (!checked.ok) throw new Error(checked.error);
+  prompt = checked.value;
   const project = await createProject(token, {name: projectNameFromPrompt(prompt)});
   try {
     await createSession(token, project.id, {prompt, model, ...options});
