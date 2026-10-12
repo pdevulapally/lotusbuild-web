@@ -1,7 +1,6 @@
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
-  sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -35,12 +34,10 @@ export async function signInWithEmail(email: string, password: string) {
 
 // Creates the account, sets its display name (the backend's /me copies it from
 // the token onto the user doc, and it's what a workspace URL's username is
-// derived from), and sends the verification link. The backend requires a
-// verified email before a build can start.
+// derived from). The backend sends and validates the numeric verification code.
 export async function signUpWithEmail(email: string, password: string, displayName: string) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, {displayName});
-  await sendEmailVerification(credential.user);
 }
 
 // Codes that mean "a popup genuinely can't be used here" — fall back to a

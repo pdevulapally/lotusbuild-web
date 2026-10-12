@@ -38,7 +38,7 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
       <AnimatePresence mode="wait" initial={false}>
         {editing ? (
           <motion.div key="edit" initial={{opacity: 0, scale: 0.98}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} transition={{duration: 0.2, ease: EASE}}
-            className="w-full max-w-[85%] rounded-3xl border border-white/10 bg-white/[0.04] p-3">
+            className="w-full max-w-[88%] rounded-[20px] border border-white/10 bg-white/[0.04] p-3 sm:max-w-[85%] sm:rounded-3xl">
             <label className="sr-only" htmlFor={`edit-${content.length}`}>Edit message</label>
             <textarea id={`edit-${content.length}`} ref={attach} value={draft} onChange={event => { setDraft(event.target.value); fit(event.target); }} rows={1}
               onKeyDown={event => { if (event.key === "Escape") { setEditing(false); setDraft(content); } if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) void save(); }}
@@ -50,7 +50,7 @@ export function UserMessage({content, canEdit, onEdit}: {content: string; canEdi
           </motion.div>
         ) : (
           <motion.div key="view" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} transition={{duration: 0.15}}
-            className="max-w-[85%] whitespace-pre-wrap break-words rounded-3xl rounded-br-lg bg-white/[0.06] px-4 py-2.5 text-[15px] leading-6">{content}</motion.div>
+            className="max-w-[88%] whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-white/[0.06] px-4 py-2.5 text-[15px] leading-6 sm:max-w-[85%] sm:rounded-3xl sm:rounded-br-lg">{content}</motion.div>
         )}
       </AnimatePresence>
       {!editing && (

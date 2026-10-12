@@ -31,7 +31,7 @@ export function PlanTool({plan, pending = false, approved, approving, onApprove}
   return (
     <motion.section aria-label={`Plan: ${plan.title}`} initial={{opacity: 0, y: 8}} animate={{opacity: 1, y: 0}} transition={{duration: 0.45, ease: EASE}}
       className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#1d1c1a]">
-      <header className="flex h-10 items-center justify-between gap-2 pl-4 pr-2">
+      <header className="flex h-10 items-center justify-between gap-2 pl-3.5 pr-2 sm:pl-4">
         <span className="flex min-w-0 items-center gap-2 text-[12px] text-gray-400">
           {pending ? <span aria-hidden className="relative flex h-3.5 w-3.5 items-center justify-center"><span className="orb-halo absolute inset-0 rounded-full" /><span className="orb-core h-2 w-2 rounded-full" /></span> : <FileText aria-hidden className="h-3.5 w-3.5 shrink-0" />}
           <span className={`truncate ${pending ? "text-shimmer" : ""}`}>{pending ? "Writing plan" : "plan.md"}</span>
@@ -44,11 +44,11 @@ export function PlanTool({plan, pending = false, approved, approving, onApprove}
           </button>
         )}
       </header>
-      <div className="border-t border-white/[0.06] bg-[#181716] px-5 pb-4 pt-4">
-        <h3 className="text-[17px] leading-7 tracking-[-0.01em] text-[#E1E0CC]">{plan.title}</h3>
+      <div className="border-t border-white/[0.06] bg-[#181716] px-4 pb-3.5 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
+        <h3 className="text-[16px] leading-6 tracking-[-0.01em] text-[#E1E0CC] sm:text-[17px] sm:leading-7">{plan.title}</h3>
         {hasBody ? (
           <div id={bodyId} className="relative mt-1">
-            <motion.div initial={false} animate={{height: expanded ? "auto" : 132}} transition={{duration: 0.4, ease: EASE}} className="overflow-hidden">
+            <motion.div initial={false} animate={{height: expanded ? "auto" : 120}} transition={{duration: 0.4, ease: EASE}} className="overflow-hidden">
               <Markdown text={plan.body} />
             </motion.div>
             <AnimatePresence>

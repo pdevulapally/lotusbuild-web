@@ -46,13 +46,14 @@ export function ShareMenu({account, projectId}: {account: ReadyAccount; projectI
   return (
     <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false); }}>
       <button type="button" aria-haspopup="dialog" aria-expanded={isOpen} onClick={() => setIsOpen(open => !open)}
-        className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 px-3 text-[12px] text-[#E1E0CC] transition-colors hover:bg-white/[0.05]">
-        <Icon aria-hidden className="h-3.5 w-3.5" /> Share
+        aria-label="Share"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-[#E1E0CC] sm:w-auto sm:gap-1.5 sm:border sm:border-white/10 sm:px-3 sm:text-[12px] sm:text-[#E1E0CC]">
+        <Icon aria-hidden strokeWidth={1.75} className="h-4 w-4 sm:h-3.5 sm:w-3.5" /><span className="hidden sm:inline">Share</span>
       </button>
       <AnimatePresence>
         {isOpen && (
           <motion.div role="dialog" aria-label="Share project" initial={{opacity: 0, y: -6, scale: 0.98}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: -6, scale: 0.98}} transition={{duration: 0.2, ease: EASE}}
-            className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-1.5rem)] origin-top-right rounded-2xl border border-white/10 bg-[#141414]/95 p-2 shadow-2xl backdrop-blur-2xl">
+            className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-1.5rem)] origin-top-right rounded-xl border border-white/[0.09] bg-[#1d1c1a] p-2 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)]">
             <p className="px-2.5 pb-1 pt-1.5 text-[13px]">Who can view this project</p>
             {OPTIONS.map(option => (
               <button key={option.value} type="button" disabled={busy || !share} onClick={() => option.value !== share?.visibility && void change(option.value)} aria-pressed={option.value === share?.visibility}

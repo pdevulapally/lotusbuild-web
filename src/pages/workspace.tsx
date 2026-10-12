@@ -3,11 +3,12 @@ import {CornerDownRight, GitBranch, Monitor, PanelRightClose, X} from "lucide-re
 import {NotificationsMenu} from "@/components/workspace/notifications";
 import {ProjectMenu} from "@/components/workspace/project-menu";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Link, useParams} from "react-router-dom";
+import {Link, useLocation, useNavigate, useParams} from "react-router-dom";
 
 import {Composer, type ComposerOptions} from "@/components/composer";
 import type {ReadyAccount} from "@/components/require-account";
 import {ChangesPanel} from "@/components/workspace/changes-panel";
+import {BuildLimitBanner, isBuildLimitFailure} from "@/components/workspace/build-limit-banner";
 import {DesktopPanel} from "@/components/workspace/desktop-panel";
 import {FilesPanel} from "@/components/workspace/files-panel";
 import {parsePlan, PlanTool} from "@/components/workspace/plan-tool";
@@ -16,7 +17,7 @@ import {UserMessage} from "@/components/workspace/user-message";
 import {Markdown, RunActivity} from "@/components/workspace/run-activity";
 import {RunUsage} from "@/components/workspace/run-usage";
 import {errorText, iconButton, PanelIcon, WorkspaceShell} from "@/components/workspace/shell";
-import {ApiError} from "@/lib/api/client";
+import {ApiError, summarizeApiFailure, type ApiFailureSummary} from "@/lib/api/client";
 import {composerModels} from "@/lib/api/me";
 import {getProject, getProjectFile, getProjectTree, type Project, type ProjectTree, downloadProjectZip} from "@/lib/api/projects";
 import {readSessionEvents, StreamClosedError} from "@/lib/api/session-events";
@@ -31,6 +32,13 @@ type Loaded = {status: "loading"} | {status: "missing"} | {status: "error"; mess
 const isLive = (session: Session | null) => session?.status === "RUNNING" || session?.status === "QUEUED";
 
 function Workspace({account, projectId}: {account: ReadyAccount; projectId: string}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const redirectedFailure = (location.state as {buildStartFailure?: unknown} | null)?.buildStartFailure;
+  const initialFailure = redirectedFailure && typeof redirectedFailure === "object" &&
+    "message" in redirectedFailure && typeof redirectedFailure.message === "string"
+    ? redirectedFailure as ApiFailureSummary
+    : null;
   const [loaded, setLoaded] = useState<Loaded>({status: "loading"});
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,7 +48,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const [desktopReady, setDesktopReady] = useState(false);
   const [stream, setStream] = useState<"idle" | "live" | "reconnecting">("idle");
   const [stopping, setStopping] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendFailure, setSendFailure] = useState<ApiFailureSummary | null>(initialFailure);
   const [showDesktop, setShowDesktop] = useState(true);
   const [approving, setApproving] = useState(false);
   const [pane, setPane] = useState<"files" | "changes" | "desktop">("desktop");
@@ -51,6 +59,12 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const token = useCallback(() => account.user.getIdToken(), [account.user]);
+
+  useEffect(() => {
+    if (initialFailure) {
+      navigate(location.pathname, {replace: true, state: null});
+    }
+  }, [initialFailure, location.pathname, navigate]);
 
   const [runs, setRuns] = useState<Session[]>([]);
   const [pickedRun, setPickedRun] = useState<string | null>(null);
@@ -130,8 +144,8 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
 
   async function submit(prompt: string, model: string, options: ComposerOptions) {
     const checked = checkPrompt(prompt);
-    if (!checked.ok) { setSendError(checked.error); return false; }
-    setSendError(null);
+    if (!checked.ok) { setSendFailure({message: checked.error}); return false; }
+    setSendFailure(null);
     pinned.current = true;
     const echo = (content: string): Message => ({seq: Number.MAX_SAFE_INTEGER - messages.length, role: "user", content, createdAt: new Date().toISOString()});
     try {
@@ -152,32 +166,32 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
         setSession(result.session);
       }
     } catch (failure) {
-      setSendError(errorText(failure, "We couldn't confirm your message. Check the conversation before sending again."));
+      setSendFailure(summarizeApiFailure(failure, "We couldn't confirm your message. Check the conversation before sending again."));
       return false;
     }
   }
 
   async function removeQueued(id: string) {
     if (!session) return;
-    setQueueBusy(id); setSendError(null);
+    setQueueBusy(id); setSendFailure(null);
     try {
       await deleteQueuedMessage(await token(), session.id, id);
       setQueued(list => list.filter(item => item.id !== id));
     } catch (failure) {
-      setSendError(errorText(failure, "That message couldn't be removed. Try again."));
+      setSendFailure(summarizeApiFailure(failure, "That message couldn't be removed. Try again."));
     } finally { setQueueBusy(null); }
   }
 
   // Steering sends a queued message into the current run, then drops it from the queue.
   async function steerQueued(item: QueuedMessage) {
     if (!session) return;
-    setQueueBusy(item.id); setSendError(null);
+    setQueueBusy(item.id); setSendFailure(null);
     try {
       const auth = await token();
       const result = await sendFollowUp(auth, session.id, item.prompt, true);
       if (!("steered" in result) && result.queued) {
         await deleteQueuedMessage(auth, session.id, result.queuedMessage.id);
-        setSendError("The agent hasn't started yet. This message will run next.");
+        setSendFailure({message: "The agent hasn't started yet. This message will run next."});
         return;
       }
       await deleteQueuedMessage(auth, session.id, item.id).catch(() => undefined);
@@ -186,7 +200,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
       setMessages(list => [...list, {seq: Number.MAX_SAFE_INTEGER - list.length, role: "user", content: item.prompt, createdAt: new Date().toISOString()}]);
       if (!("steered" in result)) { setActivity(initialActivity); setSession(result.session); }
     } catch (failure) {
-      setSendError(errorText(failure, "Couldn't steer with that message. Try again."));
+      setSendFailure(summarizeApiFailure(failure, "Couldn't steer with that message. Try again."));
     } finally { setQueueBusy(null); }
   }
 
@@ -194,17 +208,17 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   async function approvePlan(plan: string) {
     if (!session) return;
     const checked = checkPrompt(`Implement this approved plan:\n\n${plan}`);
-    if (!checked.ok) { setSendError(checked.error); return; }
-    setApproving(true); setSendError(null);
+    if (!checked.ok) { setSendFailure({message: checked.error}); return; }
+    setApproving(true); setSendFailure(null);
     try {
       const result = await sendFollowUp(await token(), session.id, checked.value, false, "build");
-      if ("steered" in result || result.queued) { setSendError("The agent is still busy. Approve again once it finishes."); return; }
+      if ("steered" in result || result.queued) { setSendFailure({message: "The agent is still busy. Approve again once it finishes."}); return; }
       pinned.current = true;
       setActivity(initialActivity);
       setMessages(list => [...list, {seq: Number.MAX_SAFE_INTEGER - list.length, role: "user", content: checked.value, createdAt: new Date().toISOString()}]);
       setSession(result.session);
     } catch (failure) {
-      setSendError(errorText(failure, "The build couldn't start. Try again."));
+      setSendFailure(summarizeApiFailure(failure, "The build couldn't start. Try again."));
     } finally { setApproving(false); }
   }
 
@@ -212,7 +226,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     if (!session) return;
     setStopping(true);
     try { await cancelSession(await token(), session.id); }
-    catch (failure) { setStopping(false); setSendError(errorText(failure, "We couldn't stop the agent. Try again.")); }
+    catch (failure) { setStopping(false); setSendFailure(summarizeApiFailure(failure, "We couldn't stop the agent. Try again.")); }
   }
 
   const lastUser = messages.map(message => message.role).lastIndexOf("user");
@@ -224,9 +238,9 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
   async function download() {
     if (!project || downloading) return;
     setDownloading(true);
-    setSendError(null);
+    setSendFailure(null);
     try { await downloadProjectZip(await token(), projectId, "project", branch ?? undefined); }
-    catch (failure) { setSendError(errorText(failure, "The download couldn't be prepared. Try again.")); }
+    catch (failure) { setSendFailure(summarizeApiFailure(failure, "The download couldn't be prepared. Try again.")); }
     finally { setDownloading(false); }
   }
 
@@ -264,21 +278,18 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
               )}
             </AnimatePresence>
             {activity.save !== "unknown" && <span className={`hidden text-[11px] sm:block ${activity.save === "saved" ? "text-gray-500" : "text-rose-300/80"}`}>{activity.save === "saved" ? "Changes saved" : "Save failed"}</span>}
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
               <NotificationsMenu account={account} />
-              {project && <ShareMenu account={account} projectId={projectId} />}
-              <div role="tablist" aria-label="View" className="flex rounded-full border border-white/[0.07] p-0.5 text-[12px] lg:hidden">
-                {(["chat", "files", "changes", "desktop"] as const).map(name => (
-                  <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}
-                    className={`rounded-full px-2.5 py-1 capitalize transition-colors duration-300 ${tab === name ? "bg-white/[0.08] text-[#E1E0CC]" : "text-gray-500"}`}>{name}</button>
-                ))}
-              </div>
+              <button type="button" onClick={() => setTab(tab === "chat" ? "desktop" : "chat")} aria-pressed={tab !== "chat"} aria-label={tab === "chat" ? "Open workspace tools" : "Return to chat"}
+                className={`${iconButton} lg:hidden`}>
+                {tab === "chat" ? <Monitor aria-hidden className="h-4 w-4" /> : <X aria-hidden className="h-4 w-4" />}
+              </button>
+              {project && <div className="hidden sm:block"><ShareMenu account={account} projectId={projectId} /></div>}
               <button type="button" onClick={() => setShowDesktop(value => !value)} aria-pressed={showDesktop} aria-label={showDesktop ? "Hide desktop" : "Show desktop"} className={`${iconButton} hidden lg:flex`}>
                 {showDesktop ? <PanelRightClose aria-hidden className="h-4 w-4" /> : <Monitor aria-hidden className="h-4 w-4" />}
               </button>
             </div>
           </header>
-
           {loaded.status === "loading" && (
             <div role="status" aria-label="Loading project" className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-6 pt-12">
               {[72, 48, 60].map(width => <span key={width} style={{width: `${width}%`}} className="h-4 animate-pulse rounded bg-white/[0.05]" />)}
@@ -305,7 +316,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                       <h2 className="text-center text-2xl tracking-[-0.02em] sm:text-3xl">What should we build in {project.name}?</h2>
                     </motion.div>
                   ) : (
-                    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-10 pt-8 sm:px-6">
+                    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-6 pt-6 sm:gap-6 sm:px-6 sm:pb-10 sm:pt-8">
                       {messages.map((message, index) => (
                         <div key={`${message.seq}-${index}`} className="contents">
                           {message.role === "user" ? (
@@ -328,11 +339,11 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                 </div>
 
                 <div className="relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-6 sm:pb-5">
-                  <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-[#131211] to-transparent" />
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-[#131211] to-transparent sm:-top-8 sm:h-8" />
                   <AnimatePresence initial={false}>
                     {queued.length > 0 && (
                       <motion.section key="queue" aria-label="Queued messages" initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 6}} transition={{duration: 0.25, ease: EASE}}
-                        className="mx-4 -mb-px rounded-t-2xl border border-b-0 border-white/[0.07] bg-[#1a1918] px-1.5 pb-1.5 pt-2">
+                        className="mx-1 -mb-px rounded-t-2xl border border-b-0 border-white/[0.07] bg-[#1a1918] px-1.5 pb-1.5 pt-2 sm:mx-4">
                         <p className="px-2.5 pb-1 text-[11.5px] text-gray-500">Queued <span className="tabular-nums">{queued.length}</span></p>
                         <ul>
                           <AnimatePresence initial={false}>
@@ -358,10 +369,12 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                       </motion.section>
                     )}
                   </AnimatePresence>
+                  {sendFailure && isBuildLimitFailure(sendFailure) && <BuildLimitBanner failure={sendFailure} />}
                   <Composer label="Message the agent" placeholder={session ? (working ? "Queue a follow-up, or steer the current run…" : "Ask for a change…") : "Describe what to build"}
                     models={composerModels(account.me)} session={session ? {model: session.model, effort: session.effort, mode: session.mode} : undefined}
                     onSubmit={async (prompt, model, options) => { const accepted = await submit(prompt, model, options); setRefreshKey(key => key + 1); return accepted; }}
-                    isWorking={working} isStopping={stopping || activity.phase === "cancel"} onStop={() => void stop()} error={sendError} />
+                    isWorking={working} isStopping={stopping || activity.phase === "cancel"} onStop={() => void stop()}
+                    error={isBuildLimitFailure(sendFailure) ? null : sendFailure?.message} />
                 </div>
               </section>
 
@@ -387,14 +400,24 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                   </motion.aside>
                 )}
               </AnimatePresence>
-              <section aria-label="Files" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "files" ? "block" : "hidden"}`}>
-                {tab === "files" && <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} />}
-              </section>
-              <section aria-label="Changes" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "changes" ? "block" : "hidden"}`}>
-                {tab === "changes" && changesPanel}
-              </section>
-              <section aria-label="Desktop" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "desktop" ? "block" : "hidden"}`}>
-                {tab === "desktop" && <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
+              <section aria-label="Workspace tools" className={`min-h-0 flex-1 flex-col bg-[#181716] lg:hidden ${tab === "chat" ? "hidden" : "flex"}`}>
+                <div className="flex h-12 shrink-0 items-stretch border-b border-white/[0.06] px-3">
+                  <div role="tablist" aria-label="Workspace tools" className="flex h-full items-stretch gap-6">
+                    {(["files", "changes", "desktop"] as const).map(name => (
+                      <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}
+                        className={`relative capitalize transition-colors duration-200 ${tab === name ? "font-medium text-[#E1E0CC]" : "text-gray-500 hover:text-gray-300"}`}>
+                        {name}
+                        {tab === name && <motion.span layoutId="mobile-tool-tab" aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-[#E1E0CC]" transition={{duration: 0.2, ease: EASE}} />}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ml-auto flex items-center gap-1">
+                    {project && <ShareMenu account={account} projectId={projectId} />}
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  {tab === "files" ? <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} /> : tab === "changes" ? changesPanel : <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
+                </div>
               </section>
             </div>
           )}

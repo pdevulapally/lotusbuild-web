@@ -7,13 +7,36 @@ const RETRY_BASE_MS = 300;
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly retryAfterSeconds: number | undefined;
+  readonly details: Readonly<Record<string, unknown>> | undefined;
 
-  constructor(status: number, code: string | undefined, message: string) {
+  constructor(
+    status: number,
+    code: string | undefined,
+    message: string,
+    retryAfterSeconds?: number,
+    details?: Readonly<Record<string, unknown>>,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
+    this.details = details;
   }
+}
+
+export type ApiFailureSummary = {
+  message: string;
+  code?: string;
+  details?: Readonly<Record<string, unknown>>;
+};
+
+export function summarizeApiFailure(failure: unknown, fallback: string): ApiFailureSummary {
+  if (failure instanceof ApiError) {
+    return {message: failure.message, code: failure.code, details: failure.details};
+  }
+  return {message: failure instanceof Error && failure.message ? failure.message : fallback};
 }
 
 export type ApiRequestInit = Omit<RequestInit, "body"> & {
@@ -65,14 +88,22 @@ async function send<T>(path: string, init: ApiRequestInit): Promise<T> {
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as {
-      error?: {code?: unknown; message?: unknown};
+      error?: {code?: unknown; message?: unknown; details?: unknown};
       code?: unknown;
       message?: unknown;
+      details?: unknown;
     };
     const nested = payload.error && typeof payload.error === "object" ? payload.error : undefined;
     const code = typeof nested?.code === "string" ? nested.code : typeof payload.code === "string" ? payload.code : undefined;
     const message = typeof nested?.message === "string" ? nested.message : typeof payload.message === "string" ? payload.message : undefined;
-    throw new ApiError(response.status, code, message ?? `Request failed with ${response.status}`);
+    const rawDetails = nested?.details ?? payload.details;
+    const details = rawDetails && typeof rawDetails === "object" && !Array.isArray(rawDetails)
+      ? rawDetails as Readonly<Record<string, unknown>>
+      : undefined;
+    const detailRetry = details?.retryAfterSeconds;
+    const retryAfter = Number(response.headers.get("retry-after") ?? detailRetry);
+    throw new ApiError(response.status, code, message ?? `Request failed with ${response.status}`,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined, details);
   }
   if (response.status === 204) return undefined as T;
   const text = await response.text();

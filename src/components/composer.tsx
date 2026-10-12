@@ -1,14 +1,13 @@
 import {LIMITS} from "@/lib/security/validation";
-import {AnimatePresence, motion} from "framer-motion";
-import {ArrowUp, Check, ChevronDown, CornerDownRight, Gauge, Hammer, ListChecks, Loader2, Square, type LucideIcon} from "lucide-react";
-import {useEffect, useId, useRef, useState, type KeyboardEvent} from "react";
+import {Selector} from "@astryxdesign/core/Selector";
+import {Token} from "@astryxdesign/core/Token";
+import {ArrowUp, CornerDownRight, Loader2, Square} from "lucide-react";
+import {useEffect, useRef, useState} from "react";
 
 import type {AgentModel} from "@/lib/api/me";
 import type {AiEffort, SessionMode} from "@/lib/api/sessions";
-import {EASE} from "@/lib/motion";
 
 export type ComposerOptions = {effort?: AiEffort; mode: SessionMode; steer?: boolean};
-type Option = {value: string; label: string; description?: string; Icon?: LucideIcon};
 
 const EFFORT_COPY: Record<AiEffort, string> = {
   low: "Fastest, lowest token use",
@@ -19,61 +18,9 @@ const EFFORT_COPY: Record<AiEffort, string> = {
 
 const chip = "flex h-8 max-w-52 items-center gap-1.5 rounded-full border px-3 text-[12.5px] transition-colors";
 
-function Picker({label, value, options, onChange, Icon}: {label: string; value: string; options: Option[]; onChange: (value: string) => void; Icon?: LucideIcon}) {
-  const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-  const id = useId();
-  useEffect(() => {
-    if (open) menu.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
-  }, [open]);
-  const close = () => { setOpen(false); trigger.current?.focus(); };
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") { event.preventDefault(); close(); return; }
-    if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
-    event.preventDefault();
-    if (!open) { setOpen(true); return; }
-    const items = [...(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [])];
-    const index = items.indexOf(document.activeElement as HTMLButtonElement);
-    items[(index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
-  };
-  return (
-    <div className="relative" onKeyDown={onKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <button ref={trigger} type="button" aria-label={`${label}: ${options.find(option => option.value === value)?.label ?? value}`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-        onClick={() => setOpen(current => !current)}
-        className={`${chip} ${open ? "border-white/15 bg-white/[0.08] text-[#E1E0CC]" : "border-white/[0.08] bg-white/[0.03] text-[#E1E0CC]/80 hover:border-white/15 hover:bg-white/[0.06] hover:text-[#E1E0CC]"}`}>
-        {(() => { const Shown = options.find(option => option.value === value)?.Icon ?? Icon; return Shown && <Shown aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5 shrink-0 text-[#E1E0CC]/60" />; })()}
-        <span className="truncate">{options.find(option => option.value === value)?.label ?? value}</span>
-        <ChevronDown aria-hidden strokeWidth={1.75} className={`h-3.5 w-3.5 shrink-0 text-[#E1E0CC]/50 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div id={id} ref={menu} role="menu" aria-label={label}
-            initial={{opacity: 0, y: 6, scale: 0.97}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 4, scale: 0.98}} transition={{duration: 0.18, ease: EASE}}
-            className="absolute bottom-full left-0 z-40 mb-2 w-72 max-w-[calc(100vw-3rem)] origin-bottom-left rounded-2xl border border-white/[0.08] bg-[#23211f] p-1.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
-            <p className="px-3 pb-1.5 pt-2 text-[12px] text-gray-500">{label}</p>
-            {options.map(option => (
-              <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === value}
-                onClick={() => { onChange(option.value); close(); }}
-                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-[#E1E0CC]/75 transition-colors hover:bg-white/[0.06] focus:bg-white/[0.06] focus:outline-none aria-checked:text-[#E1E0CC]">
-                {option.Icon && <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.04]"><option.Icon strokeWidth={1.75} className="h-4 w-4" /></span>}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] leading-5">{option.label}</span>
-                  {option.description && <span className="mt-0.5 block text-[12px] leading-4 text-gray-500">{option.description}</span>}
-                </span>
-                {option.value === value && <Check aria-hidden strokeWidth={2} className="h-4 w-4 shrink-0 text-[#E1E0CC]" />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-const MODES: {value: SessionMode; label: string; hint: string; Icon: LucideIcon}[] = [
-  {value: "build", label: "Build", hint: "Edit files, run tools, build the project", Icon: Hammer},
-  {value: "plan", label: "Plan", hint: "Explore and return a read-only plan", Icon: ListChecks},
+const MODES: {value: SessionMode; label: string; hint: string}[] = [
+  {value: "build", label: "Build", hint: "Edit files, run tools, and build the project"},
+  {value: "plan", label: "Plan", hint: "Explore the request and return a read-only plan"},
 ];
 
 export type ComposerProps = {
@@ -166,17 +113,21 @@ export function Composer({
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 pl-1">
             {session ? (
               <>
-                <span className={`${chip} border-white/[0.06] text-[#E1E0CC]/70`}><span className="truncate">{modelName(session.model)}</span></span>
-                {(() => { const current = MODES.find(item => item.value === session.mode) ?? MODES[0]; return <span className={`${chip} border-white/[0.06] text-[#E1E0CC]/70`}><current.Icon aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />{current.label}</span>; })()}
-                {session.effort && efforts.length > 0 && <span className={`${chip} border-white/[0.06] capitalize text-[#E1E0CC]/70`}><Gauge aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />{session.effort}</span>}
+                <Token label={modelName(session.model)} size="sm" color="gray" />
+                <Token label={(MODES.find(item => item.value === session.mode) ?? MODES[0]).label} size="sm" color="gray" />
+                {session.effort && efforts.length > 0 && <Token label={`${session.effort[0].toUpperCase()}${session.effort.slice(1)}`} size="sm" color="gray" />}
               </>
             ) : models.length > 0 ? (
               <>
-                <Picker label="Model" value={model} onChange={setChosenModel}
-                  options={models.map(item => ({value: item.id, label: item.name, description: item.efforts.length ? "Adjustable reasoning" : "Default reasoning"}))} />
-                <Picker label="Mode" value={mode} onChange={value => setMode(value as SessionMode)} options={MODES.map(item => ({value: item.value, label: item.label, description: item.hint, Icon: item.Icon}))} />
-                {effort && <Picker label="Reasoning effort" value={effort} onChange={value => setChosenEffort(value as AiEffort)} Icon={Gauge}
-                  options={efforts.map(item => ({value: item, label: `${item[0].toUpperCase()}${item.slice(1)}`, description: EFFORT_COPY[item]}))} />}
+                <Selector label="Model" isLabelHidden value={model} onChange={value => setChosenModel(value)}
+                  options={models.map(item => ({value: item.id, label: item.name, description: item.efforts.length ? "Adjustable reasoning" : "Default reasoning"}))}
+                  variant="ghost" size="sm" width={160} placement="above" presentation="adaptive" />
+                <Selector label="Mode" isLabelHidden value={mode} onChange={value => setMode(value as SessionMode)}
+                  options={MODES.map(item => ({value: item.value, label: item.label, description: item.hint}))}
+                  variant="ghost" size="sm" width={104} placement="above" presentation="adaptive" />
+                {effort && <Selector label="Reasoning effort" isLabelHidden value={effort} onChange={value => setChosenEffort(value as AiEffort)}
+                  options={efforts.map(item => ({value: item, label: `${item[0].toUpperCase()}${item.slice(1)}`, description: EFFORT_COPY[item]}))}
+                  variant="ghost" size="sm" width={132} placement="above" presentation="adaptive" />}
               </>
             ) : (
               <span className="px-2.5 py-1.5 text-xs text-gray-500">{modelHint ?? "Available models could not be loaded."}</span>
