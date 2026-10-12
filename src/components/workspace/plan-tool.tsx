@@ -30,7 +30,7 @@ export function PlanTool({plan, pending = false, approved, approving, onApprove}
 
   return (
     <motion.section aria-label={`Plan: ${plan.title}`} initial={{opacity: 0, y: 8}} animate={{opacity: 1, y: 0}} transition={{duration: 0.45, ease: EASE}}
-      className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121212]">
+      className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#1d1c1a]">
       <header className="flex h-10 items-center justify-between gap-2 pl-4 pr-2">
         <span className="flex min-w-0 items-center gap-2 text-[12px] text-gray-400">
           {pending ? <span aria-hidden className="relative flex h-3.5 w-3.5 items-center justify-center"><span className="orb-halo absolute inset-0 rounded-full" /><span className="orb-core h-2 w-2 rounded-full" /></span> : <FileText aria-hidden className="h-3.5 w-3.5 shrink-0" />}
@@ -44,7 +44,7 @@ export function PlanTool({plan, pending = false, approved, approving, onApprove}
           </button>
         )}
       </header>
-      <div className="border-t border-white/[0.06] bg-[#0c0c0c] px-5 pb-4 pt-4">
+      <div className="border-t border-white/[0.06] bg-[#181716] px-5 pb-4 pt-4">
         <h3 className="text-[17px] leading-7 tracking-[-0.01em] text-[#E1E0CC]">{plan.title}</h3>
         {hasBody ? (
           <div id={bodyId} className="relative mt-1">
@@ -52,7 +52,7 @@ export function PlanTool({plan, pending = false, approved, approving, onApprove}
               <Markdown text={plan.body} />
             </motion.div>
             <AnimatePresence>
-              {!expanded && <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-[#0c0c0c]" />}
+              {!expanded && <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-[#181716]" />}
             </AnimatePresence>
           </div>
         ) : <p className="mt-1 text-[13px] text-gray-500">No plan detail provided.</p>}

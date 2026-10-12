@@ -1,12 +1,14 @@
 import {LIMITS} from "@/lib/security/validation";
-import {ArrowUp, Check, ChevronDown, Loader2, Square} from "lucide-react";
+import {AnimatePresence, motion} from "framer-motion";
+import {ArrowUp, Check, ChevronDown, Gauge, Hammer, ListChecks, Loader2, Square, type LucideIcon} from "lucide-react";
 import {useEffect, useId, useRef, useState, type KeyboardEvent} from "react";
 
 import type {AgentModel} from "@/lib/api/me";
 import type {AiEffort, SessionMode} from "@/lib/api/sessions";
+import {EASE} from "@/lib/motion";
 
 export type ComposerOptions = {effort?: AiEffort; mode: SessionMode};
-type Option = {value: string; label: string; description?: string};
+type Option = {value: string; label: string; description?: string; Icon?: LucideIcon};
 
 const EFFORT_COPY: Record<AiEffort, string> = {
   low: "Fastest, lowest token use",
@@ -15,7 +17,9 @@ const EFFORT_COPY: Record<AiEffort, string> = {
   xhigh: "Deepest reasoning",
 };
 
-function Picker({label, value, options, onChange}: {label: string; value: string; options: Option[]; onChange: (value: string) => void}) {
+const chip = "flex h-8 max-w-52 items-center gap-1.5 rounded-full border px-3 text-[12.5px] transition-colors";
+
+function Picker({label, value, options, onChange, Icon}: {label: string; value: string; options: Option[]; onChange: (value: string) => void; Icon?: LucideIcon}) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -35,32 +39,42 @@ function Picker({label, value, options, onChange}: {label: string; value: string
   };
   return (
     <div className="relative" onKeyDown={onKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <button ref={trigger} type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
+      <button ref={trigger} type="button" aria-label={`${label}: ${options.find(option => option.value === value)?.label ?? value}`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
         onClick={() => setOpen(current => !current)}
-        className={`flex max-w-48 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs transition-colors ${open ? "bg-white/10 text-[#E1E0CC]" : "text-primary/60 hover:bg-white/5 hover:text-[#E1E0CC]"}`}>
+        className={`${chip} ${open ? "border-white/15 bg-white/[0.08] text-[#E1E0CC]" : "border-white/[0.08] bg-white/[0.03] text-[#E1E0CC]/80 hover:border-white/15 hover:bg-white/[0.06] hover:text-[#E1E0CC]"}`}>
+        {(() => { const Shown = options.find(option => option.value === value)?.Icon ?? Icon; return Shown && <Shown aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5 shrink-0 text-[#E1E0CC]/60" />; })()}
         <span className="truncate">{options.find(option => option.value === value)?.label ?? value}</span>
-        <ChevronDown aria-hidden className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown aria-hidden strokeWidth={1.75} className={`h-3.5 w-3.5 shrink-0 text-[#E1E0CC]/50 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
-        <div id={id} ref={menu} role="menu" aria-label={label}
-          className="absolute bottom-full left-0 z-40 mb-2 w-64 max-w-[calc(100vw-3rem)] rounded-2xl border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
-          <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-gray-500">{label}</p>
-          {options.map(option => (
-            <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === value}
-              onClick={() => { onChange(option.value); close(); }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-primary/70 hover:bg-white/5 focus:bg-white/5 focus:outline-none aria-checked:text-[#E1E0CC]">
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm">{option.label}</span>
-                {option.description && <span className="mt-0.5 block text-[11px] text-gray-500">{option.description}</span>}
-              </span>
-              {option.value === value && <Check aria-hidden className="h-3.5 w-3.5 text-primary" />}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div id={id} ref={menu} role="menu" aria-label={label}
+            initial={{opacity: 0, y: 6, scale: 0.97}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 4, scale: 0.98}} transition={{duration: 0.18, ease: EASE}}
+            className="absolute bottom-full left-0 z-40 mb-2 w-72 max-w-[calc(100vw-3rem)] origin-bottom-left rounded-2xl border border-white/[0.08] bg-[#23211f] p-1.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
+            <p className="px-3 pb-1.5 pt-2 text-[12px] text-gray-500">{label}</p>
+            {options.map(option => (
+              <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === value}
+                onClick={() => { onChange(option.value); close(); }}
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-[#E1E0CC]/75 transition-colors hover:bg-white/[0.06] focus:bg-white/[0.06] focus:outline-none aria-checked:text-[#E1E0CC]">
+                {option.Icon && <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.04]"><option.Icon strokeWidth={1.75} className="h-4 w-4" /></span>}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] leading-5">{option.label}</span>
+                  {option.description && <span className="mt-0.5 block text-[12px] leading-4 text-gray-500">{option.description}</span>}
+                </span>
+                {option.value === value && <Check aria-hidden strokeWidth={2} className="h-4 w-4 shrink-0 text-[#E1E0CC]" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+const MODES: {value: SessionMode; label: string; hint: string; Icon: LucideIcon}[] = [
+  {value: "build", label: "Build", hint: "Edit files, run tools, build the project", Icon: Hammer},
+  {value: "plan", label: "Plan", hint: "Explore and return a read-only plan", Icon: ListChecks},
+];
 
 export type ComposerProps = {
   label: string;
@@ -133,7 +147,7 @@ export function Composer({
       <form
         aria-label={label}
         onSubmit={event => { event.preventDefault(); void submit(); }}
-        className={`rounded-[1.75rem] border p-2 transition-colors ${hero ? "border-white/15 bg-[#1b1712]/60 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150 focus-within:border-white/30 sm:p-3" : "border-white/10 bg-[#101010]/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl focus-within:border-primary/30"}`}>
+        className={`rounded-[1.75rem] border p-2 transition-colors ${hero ? "border-white/15 bg-[#1b1712]/60 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150 focus-within:border-white/30 sm:p-3" : "border-white/10 bg-[#201f1d]/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl focus-within:border-primary/30"}`}>
         <label className="sr-only" htmlFor={`${label}-input`}>{label}</label>
         <textarea
           id={`${label}-input`}
@@ -150,28 +164,25 @@ export function Composer({
           className={`block w-full resize-none bg-transparent px-3 pt-2 text-[#E1E0CC] outline-none disabled:opacity-60 ${hero ? "text-base placeholder:text-[#E1E0CC]/70 sm:text-lg" : "placeholder:text-gray-500"} ${hero ? "text-base sm:text-lg" : "text-sm sm:text-[15px]"}`}
         />
         <div className="mt-1 flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 pl-1">
             {session ? (
               <>
-                <span className="truncate px-2.5 py-1.5 text-xs text-primary/60">{modelName(session.model)}</span>
-                <span className="px-2.5 py-1.5 text-xs capitalize text-gray-500">{session.mode}</span>
-                {session.effort && efforts.length > 0 && <span className="px-2.5 py-1.5 text-xs capitalize text-gray-500">{session.effort} effort</span>}
+                <span className={`${chip} border-white/[0.06] text-[#E1E0CC]/70`}><span className="truncate">{modelName(session.model)}</span></span>
+                {(() => { const current = MODES.find(item => item.value === session.mode) ?? MODES[0]; return <span className={`${chip} border-white/[0.06] text-[#E1E0CC]/70`}><current.Icon aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />{current.label}</span>; })()}
+                {session.effort && efforts.length > 0 && <span className={`${chip} border-white/[0.06] capitalize text-[#E1E0CC]/70`}><Gauge aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5" />{session.effort}</span>}
               </>
             ) : models.length > 0 ? (
               <>
                 <Picker label="Model" value={model} onChange={setChosenModel}
                   options={models.map(item => ({value: item.id, label: item.name, description: item.efforts.length ? "Adjustable reasoning" : "Default reasoning"}))} />
-                <Picker label="Mode" value={mode} onChange={value => setMode(value as SessionMode)} options={[
-                  {value: "build", label: "Build", description: "Edit files, run tools, build the project"},
-                  {value: "plan", label: "Plan", description: "Explore and return a read-only plan"},
-                ]} />
-                {effort && <Picker label="Effort" value={effort} onChange={value => setChosenEffort(value as AiEffort)}
-                  options={efforts.map(item => ({value: item, label: `${item[0].toUpperCase()}${item.slice(1)} effort`, description: EFFORT_COPY[item]}))} />}
+                <Picker label="Mode" value={mode} onChange={value => setMode(value as SessionMode)} options={MODES.map(item => ({value: item.value, label: item.label, description: item.hint, Icon: item.Icon}))} />
+                {effort && <Picker label="Reasoning effort" value={effort} onChange={value => setChosenEffort(value as AiEffort)} Icon={Gauge}
+                  options={efforts.map(item => ({value: item, label: `${item[0].toUpperCase()}${item.slice(1)}`, description: EFFORT_COPY[item]}))} />}
               </>
             ) : (
               <span className="px-2.5 py-1.5 text-xs text-gray-500">{modelHint ?? "Available models could not be loaded."}</span>
             )}
-            {queuedCount > 0 && <span className="px-2.5 py-1.5 text-xs text-gray-500">{queuedCount} queued</span>}
+            {queuedCount > 0 && <span className="px-1.5 text-[12.5px] text-gray-500">{queuedCount} queued</span>}
           </div>
           {isWorking && onStop && !value.trim() ? (
             <button type="button" onClick={onStop} disabled={isStopping} aria-label={isStopping ? "Stopping agent" : "Stop agent"}

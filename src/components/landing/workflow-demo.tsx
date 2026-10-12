@@ -113,7 +113,7 @@ export function WorkflowDemo() {
   useEffect(() => { list.current?.scrollTo({top: list.current.scrollHeight, behavior: "smooth"}); }, [visible]);
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c] text-left shadow-[0_40px_120px_-40px_rgba(0,0,0,1)] md:rounded-[1.5rem]">
+    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-[#181716] text-left shadow-[0_40px_120px_-40px_rgba(0,0,0,1)] md:rounded-[1.5rem]">
       <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
@@ -180,7 +180,7 @@ export function WorkflowDemo() {
             )}
           </ol>
           <div className="p-3">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#101010] py-1.5 pl-4 pr-1.5">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#201f1d] py-1.5 pl-4 pr-1.5">
               <span className="flex-1 truncate text-[13px] text-gray-500">Ask LotusBuild to change the project</span>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-black"><ArrowUp aria-hidden className="h-3.5 w-3.5" /></span>
             </div>

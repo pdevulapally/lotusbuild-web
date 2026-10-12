@@ -37,7 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollManager />
-      <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <Suspense fallback={<div className="min-h-screen bg-[#131211]" />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/sign-in" element={<SignInPage />} />

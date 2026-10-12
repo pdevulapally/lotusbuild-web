@@ -33,7 +33,7 @@ export function Features() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, {once: true, margin: "-100px"});
   return (
-    <section id="features" className="scroll-mt-24 relative min-h-screen overflow-hidden bg-black px-4 py-16 sm:px-6 sm:py-24">
+    <section id="features" className="scroll-mt-24 relative min-h-screen overflow-hidden bg-[#131211] px-4 py-16 sm:px-6 sm:py-24">
       <div className="bg-noise pointer-events-none absolute inset-0 opacity-[0.15]" />
       <div className="relative mx-auto max-w-7xl">
         <h2 className="flex flex-col gap-1 text-center text-balance text-3xl font-normal leading-[1.05] tracking-[-0.02em] sm:text-4xl md:text-5xl">

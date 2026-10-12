@@ -175,7 +175,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
     <WorkspaceShell account={account} activeProjectId={projectId} refreshKey={refreshKey}>
       {({openSidebar}) => (
         <>
-          <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#070707]/80 px-3 backdrop-blur-xl sm:px-5">
+          <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#131211]/80 px-3 backdrop-blur-xl sm:px-5">
             <button type="button" aria-label="Open sidebar" onClick={openSidebar} className={`${iconButton} md:hidden`}><PanelIcon /></button>
             <div className="flex min-w-0 items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.02] py-1 pl-2.5 pr-1 text-[13px]">
               <FolderGit2 aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary/70" />
@@ -260,7 +260,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                 </div>
 
                 <div className="relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-6 sm:pb-5">
-                  <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-[#070707] to-transparent" />
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-[#131211] to-transparent" />
                   <AnimatePresence initial={false}>
                     {queued.map(item => (
                       <motion.div key={item.id} layout initial={{opacity: 0, y: 8, height: 0}} animate={{opacity: 1, y: 0, height: "auto"}} exit={{opacity: 0, height: 0}} transition={{duration: 0.35, ease: EASE}}
@@ -282,7 +282,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
               <AnimatePresence initial={false}>
                 {showDesktop && (
                   <motion.aside key="desktop" aria-label="Desktop" initial={{opacity: 0, width: 0}} animate={{opacity: 1, width: "46%"}} exit={{opacity: 0, width: 0}} transition={{duration: 0.5, ease: EASE}}
-                    className="hidden min-h-0 shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#0a0a0a] lg:block">
+                    className="hidden min-h-0 shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#181716] lg:block">
                     <div className="flex h-full flex-col">
                       <div role="tablist" aria-label="Panel" className="flex h-11 shrink-0 items-center gap-1 border-b border-white/[0.06] px-3">
                         {(["files", "desktop"] as const).map(name => (
@@ -301,10 +301,10 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                   </motion.aside>
                 )}
               </AnimatePresence>
-              <section aria-label="Files" className={`min-h-0 flex-1 bg-[#0a0a0a] lg:hidden ${tab === "files" ? "block" : "hidden"}`}>
+              <section aria-label="Files" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "files" ? "block" : "hidden"}`}>
                 {tab === "files" && <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} />}
               </section>
-              <section aria-label="Desktop" className={`min-h-0 flex-1 bg-[#0a0a0a] lg:hidden ${tab === "desktop" ? "block" : "hidden"}`}>
+              <section aria-label="Desktop" className={`min-h-0 flex-1 bg-[#181716] lg:hidden ${tab === "desktop" ? "block" : "hidden"}`}>
                 {tab === "desktop" && <DesktopPanel account={account} sessionId={sessionId} running={live} ready={desktopReady} />}
               </section>
             </div>

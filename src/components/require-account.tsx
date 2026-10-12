@@ -12,7 +12,7 @@ export type ReadyAccount = Extract<WorkspaceAccount, {status: "ready"}>;
 
 function Gate({children}: {children: ReactNode}) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black px-6">
+    <main className="flex min-h-screen items-center justify-center bg-[#131211] px-6">
       <motion.div initial={{opacity: 0, y: 8}} animate={{opacity: 1, y: 0}} transition={{duration: 0.5, delay: 0.15, ease: EASE}}
         className="flex flex-col items-center gap-4 text-center">
         {children}

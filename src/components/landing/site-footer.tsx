@@ -33,7 +33,7 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="px-4 pb-6 sm:px-6">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#101010] ring-1 ring-white/5 md:rounded-[2rem]">
+      <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#201f1d] ring-1 ring-white/5 md:rounded-[2rem]">
         <div className="grid gap-12 px-6 py-12 sm:px-10 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:py-16">
           <div className="flex flex-col gap-5">
             <Link to="/" aria-label="LotusBuild home" className="w-fit">

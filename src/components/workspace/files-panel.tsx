@@ -94,7 +94,7 @@ export function FilesPanel({tree, loadFile, refKey}: {tree: Loaded<ProjectTree>;
         {file?.status === "error" && <p role="alert" className="p-6 text-sm text-rose-200/80">{file.message}</p>}
         {file?.status === "ready" && (
           <motion.div key={file.value.path} initial={{opacity: 0}} animate={{opacity: 1}} transition={{duration: 0.3, ease: EASE}}>
-            <div className="sticky top-0 border-b border-white/[0.06] bg-[#0a0a0a]/95 px-4 py-2 text-[12px] text-gray-400 backdrop-blur font-mono" style={mono}>{file.value.path}</div>
+            <div className="sticky top-0 border-b border-white/[0.06] bg-[#181716]/95 px-4 py-2 text-[12px] text-gray-400 backdrop-blur font-mono" style={mono}>{file.value.path}</div>
             {file.value.binary ? <p className="p-6 text-[13px] text-gray-500">Binary file, {file.value.size} bytes. Not shown.</p> : (
               <pre style={mono} className="font-mono [&_*]:font-mono p-4 text-[12px] leading-5 text-primary/80">
                 {(file.value.content ?? "").split("\n").map((line, n) => (

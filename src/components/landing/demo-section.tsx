@@ -5,7 +5,7 @@ import {WordsPullUpMultiStyle} from "@/components/motion/words-pull-up";
 
 export function DemoSection() {
   return (
-    <section id="demo" className="scroll-mt-24 bg-black px-4 py-16 sm:px-6 sm:py-24">
+    <section id="demo" className="scroll-mt-24 bg-[#131211] px-4 py-16 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-6xl">
         <p className="text-center text-xs uppercase tracking-[0.2em] text-primary">How it works</p>
         <h2 className="mt-5 text-center text-balance text-3xl font-normal leading-[1.05] tracking-[-0.02em] sm:text-4xl md:text-5xl" style={{color: "#E1E0CC"}}>

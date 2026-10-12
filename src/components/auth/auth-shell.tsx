@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 
 
 export const authInputClass =
-  "h-12 w-full rounded-full border border-white/10 bg-[#101010] px-5 text-sm text-[#E1E0CC] outline-none transition-colors placeholder:text-gray-500 focus:border-primary/60";
+  "h-12 w-full rounded-full border border-white/10 bg-[#201f1d] px-5 text-sm text-[#E1E0CC] outline-none transition-colors placeholder:text-gray-500 focus:border-primary/60";
 
 export const authPrimaryButtonClass =
   "group inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-black transition-all hover:gap-3 disabled:cursor-not-allowed disabled:opacity-50";
@@ -44,7 +44,7 @@ export function AuthError({message}: {message: string | null}) {
 
 export function AuthShell({title, children}: {title: string; children: ReactNode}) {
   return (
-    <main className="grid min-h-screen bg-black md:grid-cols-2">
+    <main className="grid min-h-screen bg-[#131211] md:grid-cols-2">
       <aside className="hidden p-6 md:block">
         <div className="relative h-full overflow-hidden rounded-[2rem]">
           <img className="absolute inset-0 h-full w-full object-cover" src="/images/lotus-lake.webp" alt="" />

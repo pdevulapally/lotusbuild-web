@@ -3,8 +3,8 @@ import {WordsPullUpMultiStyle} from "@/components/motion/words-pull-up";
 
 export function About() {
   return (
-    <section id="how" className="scroll-mt-24 bg-black px-4 py-8 sm:px-6 sm:py-24 md:py-32">
-      <div className="mx-auto max-w-6xl rounded-2xl bg-[#101010] px-6 py-16 text-center sm:px-10 sm:py-24 md:rounded-[2rem] md:py-32">
+    <section id="how" className="scroll-mt-24 bg-[#131211] px-4 py-8 sm:px-6 sm:py-24 md:py-32">
+      <div className="mx-auto max-w-6xl rounded-2xl bg-[#201f1d] px-6 py-16 text-center sm:px-10 sm:py-24 md:rounded-[2rem] md:py-32">
         <p className="text-xs uppercase tracking-[0.2em] text-primary">The agent</p>
         <h2 className="mx-auto mt-5 max-w-3xl text-balance text-3xl font-normal leading-[1.05] tracking-[-0.02em] sm:text-4xl md:text-5xl" style={{color: "#E1E0CC"}}>
           <WordsPullUpMultiStyle

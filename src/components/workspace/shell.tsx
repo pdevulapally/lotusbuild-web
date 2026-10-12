@@ -187,7 +187,7 @@ function CommandPalette({isOpen, onClose, username, projects}: {isOpen: boolean;
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-[18vh] backdrop-blur-sm" onMouseDown={onClose}>
           <motion.div role="dialog" aria-label="Search projects" initial={{opacity: 0, y: 12, scale: 0.98}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 8, scale: 0.98}}
             transition={{duration: 0.3, ease: EASE}} onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape") onClose(); }}
-            className="flex w-full max-w-xl flex-col gap-3 rounded-3xl border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+            className="flex w-full max-w-xl flex-col gap-3 rounded-3xl border border-white/[0.08] bg-[#1d1c1a]/90 p-4 shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
             <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 text-gray-500">
               <SearchIcon />
               <input autoFocus type="search" value={query} maxLength={LIMITS.projectName} onChange={event => setQuery(event.target.value)} placeholder="Search projects"
@@ -268,7 +268,7 @@ function ProjectRow({project, href, isActive, onDelete, onNavigate}: {project: P
               className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onMouseDown={() => !deleting && setMenu("closed")}>
               <motion.div role="alertdialog" aria-modal aria-labelledby={`delete-${project.id}`} initial={{opacity: 0, y: 12, scale: 0.98}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 8, scale: 0.98}}
                 transition={{duration: 0.3, ease: EASE}} onMouseDown={event => event.stopPropagation()}
-                className="w-full max-w-[440px] rounded-3xl border border-white/[0.08] bg-[#121212] p-6">
+                className="w-full max-w-[440px] rounded-3xl border border-white/[0.08] bg-[#1d1c1a] p-6">
                 <h2 id={`delete-${project.id}`} className="text-lg text-[#E1E0CC]">Delete this project?</h2>
                 <p className="mt-2 text-sm leading-6 text-gray-400">“{project.name}” and its entire conversation history will be permanently removed. This can't be undone.</p>
                 <div className="mt-6 flex justify-end gap-2">
@@ -423,7 +423,7 @@ export function WorkspaceShell({account, activeProjectId, refreshKey = 0, childr
   const ownBar = typeof children === "function";
 
   return (
-    <div className="relative isolate h-[100dvh] overflow-hidden bg-[#070707]" style={{color: "#E1E0CC"}}>
+    <div className="relative isolate h-[100dvh] overflow-hidden bg-[#131211]" style={{color: "#E1E0CC"}}>
       <div className={`relative grid h-full grid-cols-[minmax(0,1fr)] ${isSidebarOpen ? "md:grid-cols-[18rem_minmax(0,1fr)]" : "md:grid-cols-[5rem_minmax(0,1fr)]"}`}>
         <Sidebar account={account} activeProjectId={activeProjectId} listing={listing} isOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}
           onSearch={() => setIsSearchOpen(true)} onRetry={() => void load()} onSignOut={() => void signOutNow()} onNewProject={newProject}
@@ -441,7 +441,7 @@ export function WorkspaceShell({account, activeProjectId, refreshKey = 0, childr
 
         <div className="flex min-h-0 min-w-0 flex-col">
           {!ownBar && (
-            <div className="relative z-20 flex h-14 shrink-0 items-center gap-3 border-b border-white/[0.06] bg-[#070707]/90 px-4 backdrop-blur-xl md:hidden">
+            <div className="relative z-20 flex h-14 shrink-0 items-center gap-3 border-b border-white/[0.06] bg-[#131211]/90 px-4 backdrop-blur-xl md:hidden">
               <button type="button" aria-label="Open sidebar" aria-expanded={isSidebarOpen} onClick={() => setIsSidebarOpen(true)} className={iconButton}>
                 <PanelIcon />
               </button>

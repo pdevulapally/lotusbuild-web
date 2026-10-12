@@ -36,7 +36,7 @@ export default function SharedProjectPage() {
 
   if (shared.status !== "ready") {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-black px-6 text-center text-[#E1E0CC]">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#131211] px-6 text-center text-[#E1E0CC]">
         {shared.status === "loading" ? <p role="status" className="text-shimmer text-sm">Opening project…</p> : <>
           <p className="text-lg">This project isn't available</p>
           <p className="max-w-sm text-sm text-gray-500">It may be private, the link may have been reset, or it doesn't exist.</p>
@@ -47,7 +47,7 @@ export default function SharedProjectPage() {
   }
   const {project, messages} = shared.value;
   return (
-    <main className="flex h-dvh flex-col bg-black text-[#E1E0CC]">
+    <main className="flex h-dvh flex-col bg-[#131211] text-[#E1E0CC]">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-white/[0.06] px-3 sm:px-5">
         <Link to="/" aria-label="LotusBuild home"><img src="/images/lotusbuild-logo.png" alt="" className="h-6 w-6" /></Link>
         <div className="flex min-w-0 items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.02] py-1 pl-2.5 pr-1 text-[13px]">
@@ -79,7 +79,7 @@ export default function SharedProjectPage() {
             ))}
           </div>
         </section>
-        <aside aria-label="Files" className={`min-h-0 flex-1 border-white/[0.06] bg-[#0a0a0a] lg:block lg:max-w-[52%] lg:border-l ${tab === "files" ? "block" : "hidden"}`}>
+        <aside aria-label="Files" className={`min-h-0 flex-1 border-white/[0.06] bg-[#181716] lg:block lg:max-w-[52%] lg:border-l ${tab === "files" ? "block" : "hidden"}`}>
           <FilesPanel tree={tree} loadFile={loadFile} refKey={branch ?? ""} />
         </aside>
       </div>

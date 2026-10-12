@@ -44,7 +44,7 @@ export function SiteHeader() {
           <Link to={signedIn ? "/projects" : "/sign-up"}
             className="group inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-4 pr-1 text-sm font-medium text-black transition-all hover:gap-3">
             Start building
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black transition-transform group-hover:scale-105">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#131211] transition-transform group-hover:scale-105">
               <ArrowRight aria-hidden className="h-3.5 w-3.5" style={{color: "#E1E0CC"}} />
             </span>
           </Link></>}
