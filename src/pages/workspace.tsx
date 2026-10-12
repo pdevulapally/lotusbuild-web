@@ -12,6 +12,7 @@ import {parsePlan, PlanTool} from "@/components/workspace/plan-tool";
 import {ShareMenu} from "@/components/workspace/share-menu";
 import {UserMessage} from "@/components/workspace/user-message";
 import {Markdown, RunActivity} from "@/components/workspace/run-activity";
+import {RunUsage} from "@/components/workspace/run-usage";
 import {errorText, iconButton, PanelIcon, WorkspaceShell} from "@/components/workspace/shell";
 import {ApiError} from "@/lib/api/client";
 import {composerModels} from "@/lib/api/me";
@@ -319,6 +320,7 @@ function Workspace({account, projectId}: {account: ReadyAccount; projectId: stri
                         </div>
                       ))}
                       {lastUser < 0 && runVisible && <RunActivity activity={activity} working={working} />}
+                      {!working && <RunUsage sessionId={session.id} token={token} refreshKey={`${session.status}:${messages.length}`} />}
                       {session.status === "FAILED" && !runVisible && session.error && (
                         <p role="alert" className="rounded-2xl border border-rose-300/15 bg-rose-300/[0.04] px-4 py-3 text-sm text-rose-100/80">{session.error}</p>
                       )}

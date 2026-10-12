@@ -104,3 +104,13 @@ export function createSession(token: string, projectId: string, input: {
     body: input,
   });
 }
+
+export type RunUsage = {meterKey: string; unit: string; label: string; settled: number; open: number};
+
+// Source: backend src/server.ts `/sessions/:sessionId/usage` (owner-only).
+export async function getSessionUsage(token: string, sessionId: string): Promise<RunUsage[]> {
+  const body = await apiRequest<{meters?: unknown}>(`/sessions/${encodeURIComponent(sessionId)}/usage`, {token});
+  if (!Array.isArray(body.meters)) throw new Error("Invalid usage");
+  return body.meters.filter((item): item is RunUsage => !!item && typeof item === "object"
+    && typeof (item as RunUsage).label === "string" && Number.isFinite((item as RunUsage).settled) && Number.isFinite((item as RunUsage).open));
+}
