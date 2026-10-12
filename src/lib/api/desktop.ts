@@ -1,4 +1,4 @@
-import {apiRequest, baseUrl} from "./client";
+import {apiOrigin, apiRequest} from "./client";
 
 export type DesktopTicket = {ticket: string; path: string; expiresInSeconds: number};
 
@@ -22,5 +22,5 @@ export function desktopSocketUrl(apiOrigin: string, sessionId: string, ticket: D
 }
 
 export function configuredDesktopSocketUrl(sessionId: string, ticket: DesktopTicket) {
-  return desktopSocketUrl(baseUrl(), sessionId, ticket);
+  return desktopSocketUrl(apiOrigin(), sessionId, ticket);
 }

@@ -22,10 +22,16 @@ export type ApiRequestInit = Omit<RequestInit, "body"> & {
   token?: string;
 };
 
-export function baseUrl(): string {
+export function apiOrigin(): string {
   const value = publicEnv("API_BASE_URL");
   if (!value) throw new Error("VITE_API_BASE_URL is not set");
   return value.replace(/\/$/, "");
+}
+
+// In development, HTTP calls go through the Vite dev-server proxy on this
+// origin (vite.config.ts), so local previews need no CORS allowlist entry.
+export function baseUrl(): string {
+  return import.meta.env.DEV ? `${window.location.origin}/api` : apiOrigin();
 }
 
 // Streaming reads share the API origin and bearer authentication with JSON requests.
